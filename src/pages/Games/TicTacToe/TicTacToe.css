@@ -1,0 +1,287 @@
+/* ==========================================
+   TIC TAC TOE — Sophi's Playground
+   ========================================== */
+
+.ttt-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xl);
+  width: 100%;
+  max-width: 400px;
+  position: relative;
+}
+
+/* ── Turn Indicator ── */
+.ttt-turn-indicator {
+  width: 100%;
+  text-align: center;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ttt-turn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+
+.ttt-turn-mine {
+  background: rgba(196, 167, 231, 0.15);
+  color: var(--color-primary);
+  border: 1px solid rgba(196, 167, 231, 0.3);
+}
+
+.ttt-turn-emoji {
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+.ttt-turn-piece {
+  font-size: var(--text-lg);
+}
+
+.ttt-turn-opponent {
+  background: rgba(246, 193, 169, 0.1);
+  color: var(--text-muted);
+  border: 1px solid rgba(246, 193, 169, 0.2);
+}
+
+.ttt-turn-dots {
+  display: flex;
+  gap: 3px;
+  font-size: 8px;
+}
+
+.ttt-turn-dots span {
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+.ttt-turn-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.ttt-turn-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes blink {
+  0%, 80%, 100% { opacity: 0.2; }
+  40% { opacity: 1; }
+}
+
+.ttt-turn-result {
+  background: rgba(196, 167, 231, 0.1);
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+  font-size: var(--text-lg);
+}
+
+.ttt-turn-win {
+  background: rgba(163, 217, 165, 0.15);
+  border-color: rgba(163, 217, 165, 0.3);
+  color: var(--color-success);
+}
+
+/* ── Board ── */
+.ttt-board-wrapper {
+  position: relative;
+}
+
+.ttt-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 4px;
+  width: min(340px, 80vw);
+  height: min(340px, 80vw);
+  background: var(--glass-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+/* ── Cell ── */
+.ttt-cell {
+  background: var(--bg-surface);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--duration-base) var(--ease-smooth);
+  position: relative;
+  font-size: 3rem;
+}
+
+.ttt-cell.active:not(.filled):hover {
+  background: rgba(196, 167, 231, 0.08);
+}
+
+.ttt-cell.active:not(.filled)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid transparent;
+  border-radius: 0;
+  transition: border-color var(--duration-fast);
+}
+
+.ttt-cell.active:not(.filled):hover::after {
+  border-color: rgba(196, 167, 231, 0.2);
+}
+
+.ttt-cell.filled {
+  cursor: default;
+}
+
+.ttt-cell:disabled {
+  cursor: default;
+}
+
+.ttt-cell.winning {
+  background: rgba(163, 217, 165, 0.15);
+  animation: pulse-cell 1s ease-in-out infinite;
+}
+
+@keyframes pulse-cell {
+  0%, 100% { background: rgba(163, 217, 165, 0.1); }
+  50% { background: rgba(163, 217, 165, 0.25); }
+}
+
+/* Corner rounding */
+.ttt-cell:nth-child(1) { border-radius: var(--radius-xl) 0 0 0; }
+.ttt-cell:nth-child(3) { border-radius: 0 var(--radius-xl) 0 0; }
+.ttt-cell:nth-child(7) { border-radius: 0 0 0 var(--radius-xl); }
+.ttt-cell:nth-child(9) { border-radius: 0 0 var(--radius-xl) 0; }
+
+/* ── Pieces ── */
+.ttt-piece {
+  font-size: 2.8rem;
+  line-height: 1;
+  user-select: none;
+}
+
+/* ── Shake animation (draw) ── */
+.ttt-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+/* ── Players ── */
+.ttt-players {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.ttt-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid transparent;
+  transition: all var(--duration-base) var(--ease-smooth);
+  opacity: 0.5;
+}
+
+.ttt-player.active {
+  opacity: 1;
+  border-color: var(--color-primary-glow);
+  box-shadow: var(--shadow-glow);
+}
+
+.ttt-player-piece {
+  font-size: var(--text-2xl);
+}
+
+.ttt-player-name {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+}
+
+.ttt-player.active .ttt-player-name {
+  color: var(--text-primary);
+}
+
+.ttt-vs {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+}
+
+/* ── Result Overlay ── */
+.ttt-result-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 11, 22, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: var(--space-base);
+}
+
+.ttt-result-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-2xl);
+  text-align: center;
+  max-width: 340px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.ttt-result-emoji {
+  font-size: 4rem;
+  animation: float 2s ease-in-out infinite;
+}
+
+.ttt-result-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.ttt-result-points {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-primary);
+  padding: var(--space-xs) var(--space-base);
+  background: rgba(196, 167, 231, 0.1);
+  border-radius: var(--radius-full);
+}
+
+.ttt-result-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}

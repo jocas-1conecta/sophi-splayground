@@ -1,0 +1,233 @@
+/* ==========================================
+   MATCH HISTORY — Sophi's Playground
+   ========================================== */
+
+.history-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding-bottom: var(--space-2xl);
+}
+
+/* ── Header ── */
+.history-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.history-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+/* Quick Stats */
+.history-quick-stats {
+  display: flex;
+  gap: var(--space-sm);
+  width: 100%;
+}
+
+.history-qs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-sm) var(--space-xs);
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
+}
+
+.history-qs-value {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.history-qs-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.history-qs.win .history-qs-value {
+  color: var(--color-success);
+}
+
+.history-qs.draw .history-qs-value {
+  color: var(--color-yellow);
+}
+
+.history-qs.lose .history-qs-value {
+  color: var(--color-error);
+}
+
+/* ── Filters ── */
+.history-filters {
+  display: flex;
+  gap: var(--space-xs);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 2px;
+}
+
+.history-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.history-filter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  background: var(--bg-surface);
+  border: 1px solid var(--glass-border);
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--duration-base) var(--ease-smooth);
+}
+
+.history-filter.active {
+  background: rgba(196, 167, 231, 0.15);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.history-filter:hover:not(.active) {
+  color: var(--text-secondary);
+  border-color: rgba(196, 167, 231, 0.3);
+}
+
+/* ── Match Cards ── */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.history-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-base) !important;
+  transition: all var(--duration-base) var(--ease-smooth);
+}
+
+.history-card:hover {
+  transform: translateX(4px);
+}
+
+/* Result border indicator */
+.history-card.result-win {
+  border-left: 3px solid var(--color-success);
+}
+
+.history-card.result-draw {
+  border-left: 3px solid var(--color-yellow);
+}
+
+.history-card.result-lose {
+  border-left: 3px solid var(--color-error);
+}
+
+/* Left — Game emoji */
+.history-card-left {
+  flex-shrink: 0;
+}
+
+.history-card-emoji {
+  font-size: 1.8rem;
+}
+
+/* Center — Info */
+.history-card-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.history-card-game {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.history-card-opponent {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.history-card-time {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* Right — Result */
+.history-card-right {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.history-card-result-emoji {
+  font-size: 1.2rem;
+}
+
+.history-card-result-label {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+}
+
+.result-win .history-card-result-label {
+  color: var(--color-success);
+}
+
+.result-draw .history-card-result-label {
+  color: var(--color-yellow);
+}
+
+.result-lose .history-card-result-label {
+  color: var(--color-error);
+}
+
+.history-card-points {
+  font-family: var(--font-display);
+  font-size: 10px;
+  color: var(--color-primary);
+  font-weight: var(--weight-semibold);
+}
+
+/* ── Total Points ── */
+.history-total-points {
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  padding: var(--space-md);
+  background: rgba(196, 167, 231, 0.05);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
+}
+
+.history-total-points strong {
+  color: var(--color-primary);
+}

@@ -1,0 +1,281 @@
+/* ==========================================
+   REWARDS PAGE — Sophi's Playground
+   ========================================== */
+
+.rewards-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding-bottom: var(--space-2xl);
+}
+
+/* ── Header ── */
+.rewards-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.rewards-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.rewards-points-display {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-lg);
+  background: linear-gradient(135deg, rgba(196, 167, 231, 0.1), rgba(235, 111, 146, 0.08));
+  border: 1px solid rgba(196, 167, 231, 0.2);
+  border-radius: var(--radius-full);
+}
+
+.rewards-points-emoji {
+  font-size: var(--text-lg);
+}
+
+.rewards-points-value {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.rewards-points-label {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* ── Tabs ── */
+.rewards-tabs {
+  display: flex;
+  gap: var(--space-xs);
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xs);
+  border: 1px solid var(--glass-border);
+}
+
+.rewards-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-base);
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-base) var(--ease-smooth);
+}
+
+.rewards-tab.active {
+  background: rgba(196, 167, 231, 0.15);
+  color: var(--color-primary);
+}
+
+.rewards-tab:hover:not(.active) {
+  color: var(--text-secondary);
+}
+
+/* ── Grid ── */
+.rewards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-md);
+}
+
+/* ── Reward Card ── */
+.reward-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-lg) var(--space-md) var(--space-md);
+  text-align: center;
+  transition: all var(--duration-base) var(--ease-smooth);
+  overflow: hidden;
+}
+
+.reward-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--rarity-color);
+}
+
+.reward-card.owned {
+  border-color: var(--color-success);
+  background: rgba(163, 217, 165, 0.03);
+}
+
+.reward-card.just-unlocked {
+  border-color: var(--rarity-color);
+  box-shadow: 0 0 25px var(--rarity-glow);
+  animation: reward-glow 2s ease-in-out 2;
+}
+
+@keyframes reward-glow {
+  0%, 100% { box-shadow: 0 0 10px var(--rarity-glow); }
+  50% { box-shadow: 0 0 30px var(--rarity-glow); }
+}
+
+/* Rarity badge */
+.reward-rarity-badge {
+  position: absolute;
+  top: var(--space-xs);
+  right: var(--space-xs);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Emoji */
+.reward-emoji {
+  font-size: 2.5rem;
+  line-height: 1;
+  transition: transform 0.3s var(--ease-smooth);
+}
+
+.reward-card:hover .reward-emoji {
+  transform: scale(1.15);
+}
+
+/* Info */
+.reward-name {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.reward-description {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* Action buttons/badges */
+.reward-owned-badge {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-success);
+  padding: var(--space-xs) var(--space-sm);
+  background: rgba(163, 217, 165, 0.1);
+  border-radius: var(--radius-full);
+}
+
+.reward-auto-badge {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  padding: var(--space-xs) var(--space-sm);
+  background: rgba(128, 128, 128, 0.1);
+  border-radius: var(--radius-full);
+}
+
+.reward-unlock-btn {
+  width: 100%;
+  font-size: var(--text-xs) !important;
+  padding: var(--space-xs) var(--space-sm) !important;
+}
+
+/* ── Confirm Modal ── */
+.reward-confirm-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+}
+
+.reward-confirm-emoji {
+  font-size: 4rem;
+}
+
+.reward-confirm-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.reward-confirm-name {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--color-primary);
+}
+
+.reward-confirm-cost {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.reward-confirm-balance {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.reward-confirm-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+/* ── Celebration ── */
+.reward-celebration {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 300;
+  animation: fade-out 0.5s ease-out 2.5s forwards;
+}
+
+.reward-celebration-content {
+  position: relative;
+}
+
+.reward-celebration-emoji {
+  font-size: 6rem;
+  display: block;
+  animation: float 1.5s ease-in-out infinite;
+}
+
+.reward-celebration-sparkles {
+  position: absolute;
+  top: -10px;
+  right: -20px;
+  font-size: 2rem;
+  animation: sparkle-spin 1s ease-in-out infinite;
+}
+
+@keyframes sparkle-spin {
+  0% { transform: rotate(0deg) scale(0.8); opacity: 0.5; }
+  50% { transform: rotate(180deg) scale(1.2); opacity: 1; }
+  100% { transform: rotate(360deg) scale(0.8); opacity: 0.5; }
+}
+
+@keyframes fade-out {
+  to { opacity: 0; }
+}

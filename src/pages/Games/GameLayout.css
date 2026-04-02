@@ -1,0 +1,97 @@
+/* ==========================================
+   GAME LAYOUT — Sophi's Playground
+   ========================================== */
+
+.game-layout {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+}
+
+/* ── Header ── */
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-base);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--glass-border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.game-header-center {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.game-header-emoji {
+  font-size: var(--text-lg);
+}
+
+.game-header-name {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.game-header-score {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.game-score-value {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--color-primary);
+  min-width: 24px;
+  text-align: center;
+}
+
+.game-score-divider {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* ── Content ── */
+.game-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+  gap: var(--space-lg);
+}
+
+/* ── Coming Soon placeholder ── */
+.game-coming-soon {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.game-coming-soon-emoji {
+  font-size: 4rem;
+  animation: float 2s ease-in-out infinite;
+}
+
+.game-coming-soon h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.game-coming-soon p {
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+}

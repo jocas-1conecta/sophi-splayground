@@ -1,0 +1,479 @@
+/* ==========================================
+   TUTTI FRUTTI — Sophi's Playground
+   ========================================== */
+
+.tf-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  width: 100%;
+  max-width: 500px;
+  position: relative;
+}
+
+/* ── Round Info ── */
+.tf-round-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.tf-round-badge {
+  padding: var(--space-xs) var(--space-base);
+  background: rgba(246, 193, 169, 0.1);
+  border: 1px solid rgba(246, 193, 169, 0.2);
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-peach);
+}
+
+.tf-round-letter {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.tf-round-letter strong {
+  font-size: var(--text-lg);
+  color: var(--color-peach);
+}
+
+/* ── Cumulative Score ── */
+.tf-cumulative-score {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.tf-cs-name {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.tf-cs-score {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.tf-cs-dash {
+  color: var(--text-muted);
+}
+
+/* ── Letter Spinner ── */
+.tf-spinner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  padding: var(--space-2xl) 0;
+}
+
+.tf-spinner-label {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--text-secondary);
+}
+
+.tf-spinner-letter {
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface);
+  border: 3px solid var(--glass-border);
+  font-family: var(--font-display);
+  font-size: 4rem;
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  transition: all 0.3s var(--ease-smooth);
+}
+
+.tf-spinner-letter.spinning {
+  animation: spin-pulse 0.15s ease-in-out infinite;
+  border-color: var(--color-peach);
+}
+
+@keyframes spin-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.tf-spinner-letter.revealed {
+  border-color: var(--color-peach);
+  box-shadow: 0 0 30px rgba(246, 193, 169, 0.3);
+  color: var(--color-peach);
+  transform: scale(1.1);
+}
+
+.tf-spinner-go {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-peach);
+}
+
+/* ── Timer ── */
+.tf-timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+}
+
+.tf-timer-num {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  min-width: 3ch;
+  text-align: center;
+}
+
+.tf-timer-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.tf-timer.danger .tf-timer-num {
+  color: var(--color-error);
+  animation: pulse-glow 0.5s ease-in-out infinite;
+}
+
+.tf-timer.basta-mode {
+  border-color: var(--color-error);
+  background: rgba(235, 111, 146, 0.08);
+}
+
+/* ── Answer Grid ── */
+.tf-grid {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.tf-grid-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.tf-grid-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 90px;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+}
+
+.tf-grid-emoji {
+  font-size: var(--text-lg);
+}
+
+.tf-grid-input-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+.tf-grid-letter-hint {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--color-peach);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.tf-grid-input {
+  padding-left: 28px;
+  width: 100%;
+}
+
+/* ── Actions ── */
+.tf-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.tf-basta-btn {
+  background: linear-gradient(135deg, #eb6f92, #d4556e);
+  color: white;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  letter-spacing: 0.05em;
+  box-shadow: 0 4px 15px rgba(235, 111, 146, 0.3);
+  transition: all var(--duration-base) var(--ease-smooth);
+}
+
+.tf-basta-btn:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 20px rgba(235, 111, 146, 0.4);
+}
+
+/* ── Waiting ── */
+.tf-waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-2xl);
+}
+
+.tf-waiting-emoji {
+  font-size: 3rem;
+  animation: float 2s ease-in-out infinite;
+}
+
+.tf-waiting p {
+  font-family: var(--font-display);
+  color: var(--text-muted);
+}
+
+/* ── Reveal ── */
+.tf-reveal {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.tf-reveal-title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.tf-reveal-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.tf-reveal-row {
+  background: var(--bg-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.tf-reveal-category {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-muted);
+  margin-bottom: var(--space-xs);
+}
+
+.tf-reveal-answers {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.tf-reveal-answer {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.tf-reveal-unique {
+  background: rgba(163, 217, 165, 0.1);
+  border: 1px solid rgba(163, 217, 165, 0.3);
+}
+
+.tf-reveal-shared {
+  background: rgba(246, 193, 169, 0.1);
+  border: 1px solid rgba(246, 193, 169, 0.3);
+}
+
+.tf-reveal-invalid, .tf-reveal-empty {
+  background: rgba(235, 111, 146, 0.05);
+  border: 1px solid rgba(235, 111, 146, 0.2);
+}
+
+.tf-reveal-text {
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+}
+
+.tf-reveal-badge {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+.tf-reveal-total {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+  padding: var(--space-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--color-peach);
+  border-radius: var(--radius-lg);
+}
+
+.tf-reveal-total-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.tf-reveal-total-name {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.tf-reveal-total-score {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--color-peach);
+}
+
+.tf-reveal-total-dash {
+  font-size: var(--text-lg);
+  color: var(--text-muted);
+}
+
+/* ── Game Over ── */
+.tf-result-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 11, 22, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: var(--space-base);
+}
+
+.tf-result-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-2xl) var(--space-xl);
+  text-align: center;
+  max-width: 360px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.tf-result-emoji {
+  font-size: 4rem;
+  animation: float 2s ease-in-out infinite;
+}
+
+.tf-result-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+/* Round breakdown */
+.tf-result-rounds {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.tf-result-round-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.tf-rr-label {
+  min-width: 50px;
+  text-align: right;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.tf-rr-score {
+  min-width: 30px;
+  text-align: center;
+  font-weight: var(--weight-semibold);
+}
+
+.tf-rr-score.winner {
+  color: var(--color-success);
+}
+
+.tf-rr-score.total {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+
+.tf-rr-dash {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.tf-result-total-row {
+  border-top: 1px solid var(--glass-border);
+  padding-top: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+.tf-result-points {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-peach);
+  padding: var(--space-xs) var(--space-base);
+  background: rgba(246, 193, 169, 0.1);
+  border-radius: var(--radius-full);
+}
+
+.tf-result-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}

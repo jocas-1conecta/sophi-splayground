@@ -1,0 +1,117 @@
+/* ==========================================
+   QUICK CHAT — Sophi's Playground
+   ========================================== */
+
+.quick-chat {
+  position: fixed;
+  bottom: calc(var(--bottom-nav-height) + var(--space-lg));
+  right: var(--space-base);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-sm);
+}
+
+/* ── Toggle Button ── */
+.quick-chat-toggle {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  border: none;
+  font-size: var(--text-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  transition: all var(--duration-base) var(--ease-smooth);
+}
+
+.quick-chat-toggle:hover {
+  transform: scale(1.1);
+}
+
+.quick-chat-toggle.open {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+/* ── Bubble ── */
+.quick-chat-bubble {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-base);
+  background: var(--bg-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.quick-chat-bubble-emoji {
+  font-size: var(--text-xl);
+}
+
+.quick-chat-bubble-text {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* ── Picker ── */
+.quick-chat-picker {
+  background: var(--bg-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-sm);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(10px);
+  max-width: 280px;
+}
+
+.quick-chat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-xs);
+}
+
+.quick-chat-phrase {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  font-family: var(--font-body);
+}
+
+.quick-chat-phrase:hover {
+  background: rgba(196, 167, 231, 0.1);
+  border-color: var(--glass-border);
+}
+
+.quick-chat-phrase:active {
+  transform: scale(0.95);
+}
+
+.quick-chat-phrase-emoji {
+  font-size: var(--text-lg);
+  flex-shrink: 0;
+}
+
+.quick-chat-phrase-text {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

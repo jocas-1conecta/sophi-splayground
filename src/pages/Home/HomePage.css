@@ -1,0 +1,157 @@
+/* ==========================================
+   HOME PAGE
+   ========================================== */
+
+.home-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  padding: var(--space-base) 0;
+}
+
+/* ── Welcome ── */
+.home-welcome {
+  text-align: center;
+  padding: var(--space-lg) 0;
+}
+
+.home-greeting {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-extrabold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.home-subtitle {
+  font-size: var(--text-base);
+  color: var(--text-muted);
+}
+
+/* ── Stats ── */
+.home-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+}
+
+.home-stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-base);
+  text-align: center;
+}
+
+.home-stat-emoji {
+  font-size: 1.5rem;
+}
+
+.home-stat-value {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-extrabold);
+  color: var(--text-primary);
+}
+
+.home-stat-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: var(--weight-semibold);
+}
+
+/* ── Games ── */
+.home-section-title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  margin-bottom: var(--space-md);
+}
+
+.home-games-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.home-game-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-base);
+  text-decoration: none;
+  color: inherit;
+}
+
+.home-game-emoji {
+  font-size: 2rem;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(196, 167, 231, 0.1);
+  border-radius: var(--radius-lg);
+}
+
+.home-game-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-game-name {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.home-game-desc {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.home-game-arrow {
+  font-size: var(--text-xl);
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform var(--duration-base) var(--ease-smooth);
+}
+
+.home-game-card:hover .home-game-arrow {
+  transform: translateX(4px);
+  color: var(--color-primary);
+}
+
+/* ── Friend Code ── */
+.home-friend-code {
+  margin-top: var(--space-sm);
+}
+
+.home-code-card {
+  text-align: center;
+  background: linear-gradient(135deg, rgba(196, 167, 231, 0.1), rgba(245, 169, 192, 0.08));
+}
+
+.home-code-label {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-sm);
+}
+
+.home-code-value {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-extrabold);
+  letter-spacing: 0.3em;
+  color: var(--color-primary-light);
+  margin-bottom: var(--space-sm);
+}
+
+.home-code-hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
