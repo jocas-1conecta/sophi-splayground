@@ -25,7 +25,44 @@ export async function getProfile(userId) {
     .select('*')
     .eq('id', userId)
     .single();
+
+  // Profile exists — return it
+  if (data) return data;
+
+  // Profile doesn't exist (trigger failed) — create it
+  if (error && error.code === 'PGRST116') {
+    return await ensureProfile(userId);
+  }
+
   if (error) throw error;
+  return data;
+}
+
+/**
+ * Fallback: create profile from client if the DB trigger didn't fire
+ */
+async function ensureProfile(userId) {
+  // Get user metadata for display_name
+  const { data: { user } } = await supabase.auth.getUser();
+  const displayName = user?.user_metadata?.display_name || 'Jugadora';
+  const username = 'player_' + userId.substring(0, 8);
+  const friendCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .upsert({
+      id: userId,
+      display_name: displayName,
+      username: username,
+      friend_code: friendCode,
+    }, { onConflict: 'id' })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('ensureProfile failed:', error);
+    return null;
+  }
   return data;
 }
 
