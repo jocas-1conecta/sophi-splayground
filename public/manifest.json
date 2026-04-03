@@ -1,0 +1,26 @@
+{
+  "name": "Sophi's Playground",
+  "short_name": "Sophi's",
+  "description": "¡Juega con tus amigas! 3 en Raya, Tutti Frutti y Batalla de Adivinanzas",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1625",
+  "theme_color": "#c4a7e7",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "entertainment"],
+  "lang": "es"
+}
