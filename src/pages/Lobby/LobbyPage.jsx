@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { GAME_INFO, GAME_TYPES } from '../../constants/gameConfig';
 import { useAuthStore } from '../../stores/authStore';
 import { useFriendStore } from '../../stores/friendStore';
@@ -55,6 +55,9 @@ function FriendPicker({ friends, onlineUsers, onSelect, selectedId }) {
       <div className="lobby-no-friends">
         <span>🔍</span>
         <p>Agrega amigas para poder invitarlas a jugar</p>
+        <Link to="/friends" className="btn btn-primary">
+          👯 Agregar amiga
+        </Link>
       </div>
     );
   }
