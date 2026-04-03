@@ -297,14 +297,6 @@ export default function LobbyPage() {
         countdown={inviteCountdown}
         onCancel={cancelInvite}
       />
-
-      {/* Incoming Invite Modal */}
-      <InviteModal
-        isOpen={!!pendingInvitation}
-        invitation={pendingInvitation}
-        onAccept={handleAcceptInvite}
-        onDecline={handleDeclineInvite}
-      />
     </div>
   );
 }
