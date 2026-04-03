@@ -8,6 +8,7 @@ import {
   getSession,
   onAuthStateChange,
 } from '../services/authService';
+import { startPresence, stopPresence } from '../services/presenceService';
 
 // Demo user for when Supabase is not configured
 const DEMO_USER = {
@@ -47,17 +48,21 @@ export const useAuthStore = create((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const session = await getSession();
+      const currentUser = session?.user ?? null;
       set({
-        user: session?.user ?? null,
+        user: currentUser,
         session,
         isLoading: false,
       });
 
+      // Start presence if already logged in
+      if (currentUser) startPresence(currentUser.id);
+
       onAuthStateChange((session) => {
-        set({
-          user: session?.user ?? null,
-          session,
-        });
+        const user = session?.user ?? null;
+        set({ user, session });
+        if (user) startPresence(user.id);
+        else stopPresence();
       });
     } catch (error) {
       console.error('Auth init error:', error);
@@ -126,13 +131,16 @@ export const useAuthStore = create((set, get) => ({
 
     try {
       set({ isLoading: true, error: null });
+      stopPresence();
       await authSignOut();
       // Clear all stores
       const { useProfileStore } = await import('./profileStore');
       useProfileStore.getState().clear();
+      const { useFriendStore } = await import('./friendStore');
+      useFriendStore.getState().clear();
       set({ user: null, session: null, isLoading: false });
     } catch (error) {
-      // Force clear even on error
+      stopPresence();
       set({ user: null, session: null, isLoading: false, error: error.message });
     }
   },

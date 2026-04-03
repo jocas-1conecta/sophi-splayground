@@ -24,6 +24,7 @@ import RiddleBattlePage from './pages/Games/RiddleBattle/RiddleBattlePage';
 /* Components */
 import LoadingScreen from './components/feedback/LoadingScreen';
 import InstallPrompt from './components/ui/InstallPrompt';
+import FriendNotification from './components/ui/FriendNotification';
 
 function ProtectedRoute({ children }) {
   const { user, isLoading } = useAuthStore();
@@ -120,6 +121,7 @@ export default function App() {
         <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
       </Routes>
       <InstallPrompt />
+      <FriendNotification />
     </BrowserRouter>
   );
 }

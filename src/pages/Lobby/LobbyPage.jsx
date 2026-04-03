@@ -62,50 +62,37 @@ function FriendPicker({ friends, onlineUsers, onSelect, selectedId }) {
     );
   }
 
+  const renderFriend = (friend, isOnline) => (
+    <button
+      key={friend.id}
+      className={`friend-picker-item ${selectedId === friend.id ? 'selected' : ''}`}
+      onClick={() => onSelect(friend)}
+    >
+      <div className="avatar-wrapper">
+        <div className={`avatar avatar-sm ${!isOnline ? 'avatar-muted' : ''}`}>
+          {friend.display_name?.charAt(0) || '?'}
+        </div>
+        <span className={`online-dot ${isOnline ? 'online' : 'offline'}`} />
+      </div>
+      <span className="friend-picker-name">{friend.display_name}</span>
+    </button>
+  );
+
   return (
     <div className="friend-picker">
       {onlineFriends.length > 0 && (
         <div className="friend-picker-group">
           <span className="friend-picker-label">🟢 Online ({onlineFriends.length})</span>
           <div className="friend-picker-list">
-            {onlineFriends.map((friend) => (
-              <button
-                key={friend.id}
-                className={`friend-picker-item ${selectedId === friend.id ? 'selected' : ''}`}
-                onClick={() => onSelect(friend)}
-              >
-                <div className="avatar-wrapper">
-                  <div className="avatar avatar-sm">
-                    {friend.display_name?.charAt(0) || '?'}
-                  </div>
-                  <span className="online-dot online" />
-                </div>
-                <span className="friend-picker-name">{friend.display_name}</span>
-              </button>
-            ))}
+            {onlineFriends.map((f) => renderFriend(f, true))}
           </div>
         </div>
       )}
-
       {offlineFriends.length > 0 && (
         <div className="friend-picker-group">
           <span className="friend-picker-label">⚫ Offline ({offlineFriends.length})</span>
           <div className="friend-picker-list">
-            {offlineFriends.map((friend) => (
-              <button
-                key={friend.id}
-                className="friend-picker-item disabled"
-                disabled
-              >
-                <div className="avatar-wrapper">
-                  <div className="avatar avatar-sm avatar-muted">
-                    {friend.display_name?.charAt(0) || '?'}
-                  </div>
-                  <span className="online-dot offline" />
-                </div>
-                <span className="friend-picker-name">{friend.display_name}</span>
-              </button>
-            ))}
+            {offlineFriends.map((f) => renderFriend(f, false))}
           </div>
         </div>
       )}
