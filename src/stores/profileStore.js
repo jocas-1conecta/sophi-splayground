@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { isDemoMode } from '../services/supabase';
 import { DEMO_PROFILE } from './authStore';
-import { getProfile, updateProfile } from '../services/profileService';
+import { getProfile, updateProfile, addPoints } from '../services/profileService';
 
 export const useProfileStore = create((set, get) => ({
   profile: null,
@@ -47,38 +47,46 @@ export const useProfileStore = create((set, get) => ({
   addLocalPoints: (points) => {
     const { profile } = get();
     if (profile) {
+      // Optimistic update
       set({
         profile: {
           ...profile,
-          points: profile.points + points,
+          points: Math.max(0, profile.points + points),
         },
       });
+      // Sync to Supabase in background
+      if (!isDemoMode) {
+        addPoints(profile.id, points).catch(console.error);
+      }
     }
   },
 
   incrementGamesPlayed: () => {
     const { profile } = get();
     if (profile) {
+      const newCount = profile.games_played + 1;
       set({
-        profile: {
-          ...profile,
-          games_played: profile.games_played + 1,
-        },
+        profile: { ...profile, games_played: newCount },
       });
+      if (!isDemoMode) {
+        updateProfile(profile.id, { games_played: newCount }).catch(console.error);
+      }
     }
   },
 
   incrementGamesWon: () => {
     const { profile } = get();
     if (profile) {
+      const newCount = profile.games_won + 1;
       set({
-        profile: {
-          ...profile,
-          games_won: profile.games_won + 1,
-        },
+        profile: { ...profile, games_won: newCount },
       });
+      if (!isDemoMode) {
+        updateProfile(profile.id, { games_won: newCount }).catch(console.error);
+      }
     }
   },
 
   clear: () => set({ profile: null, isLoading: false, error: null }),
 }));
+
