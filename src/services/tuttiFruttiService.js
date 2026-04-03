@@ -60,6 +60,40 @@ export function isWordValid(word, category, letter) {
 }
 
 /**
+ * Add a new word to the database and update the local cache.
+ * Called when both players agree a maybe_valid word is legit.
+ */
+export async function addWordToBank(category, letter, word) {
+  // Normalize for cache
+  const normalized = word.trim().toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  // Update local cache immediately
+  if (cachedWords) {
+    if (!cachedWords[category]) cachedWords[category] = {};
+    if (!cachedWords[category][letter]) cachedWords[category][letter] = [];
+    if (!cachedWords[category][letter].includes(normalized)) {
+      cachedWords[category][letter].push(normalized);
+    }
+  }
+
+  // Persist to DB
+  if (isDemoMode || !supabase) return;
+
+  try {
+    await supabase
+      .from('tutti_frutti_words')
+      .upsert(
+        { category, letter: letter.toUpperCase(), word: word.trim() },
+        { onConflict: 'category,word' }
+      );
+  } catch (err) {
+    console.error('Failed to add word to bank:', err);
+  }
+}
+
+/**
  * Clear cache (useful on logout)
  */
 export function clearWordsCache() {

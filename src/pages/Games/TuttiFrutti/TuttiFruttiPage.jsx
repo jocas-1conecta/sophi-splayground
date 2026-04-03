@@ -73,6 +73,7 @@ export default function TuttiFruttiPage() {
   // Multiplayer state
   const [opponentAnswers, setOpponentAnswers] = useState(null);
   const [mySubmitted, setMySubmitted] = useState(false);
+  const [opponentVotes, setOpponentVotes] = useState({});
 
   // Match scores
   const [totalP1, setTotalP1] = useState(0);
@@ -97,6 +98,8 @@ export default function TuttiFruttiPage() {
         playSound('basta');
       } else if (type === 'submit_answers') {
         setOpponentAnswers(data.answers);
+      } else if (type === 'word_vote') {
+        setOpponentVotes((prev) => ({ ...prev, [data.wordKey]: data.approve }));
       }
     });
 
@@ -237,6 +240,7 @@ export default function TuttiFruttiPage() {
       setRoundDetails(null);
       setMySubmitted(false);
       setOpponentAnswers(null);
+      setOpponentVotes({});
       setPhase(PHASE.LETTER_SPIN);
     }
   }, [currentRound, currentLetter, totalP1, totalP2, roundP1, roundP2]);
@@ -296,6 +300,7 @@ export default function TuttiFruttiPage() {
     setRoundHistory([]);
     setMySubmitted(false);
     setOpponentAnswers(null);
+    setOpponentVotes({});
     pointsAwarded.current = false;
   };
 
@@ -375,7 +380,17 @@ export default function TuttiFruttiPage() {
             p2Total={roundP2}
             p1Name="Tú"
             p2Name={opponentName}
+            currentLetter={currentLetter}
+            isMultiplayer={isMultiplayer}
             onComplete={handleRevealComplete}
+            onVote={(wordKey, approve) => {
+              sendGameEvent('word_vote', { wordKey, approve }, user.id);
+            }}
+            opponentVotes={opponentVotes}
+            onScoreUpdate={(newP1, newP2) => {
+              setRoundP1(newP1);
+              setRoundP2(newP2);
+            }}
           />
         )}
 
