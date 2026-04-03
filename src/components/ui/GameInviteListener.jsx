@@ -12,7 +12,7 @@ import Modal from './Modal';
  */
 export default function GameInviteListener() {
   const { user } = useAuthStore();
-  const { createGame, cancelInvite, sentInvitation } = useGameStore();
+  const { joinGame, cancelInvite } = useGameStore();
   const navigate = useNavigate();
   const [invite, setInvite] = useState(null);
 
@@ -34,7 +34,6 @@ export default function GameInviteListener() {
           const inv = payload.new;
           if (inv.status !== 'pending') return;
 
-          // Fetch sender name
           const { data: sender } = await supabase
             .from('profiles')
             .select('display_name')
@@ -49,7 +48,7 @@ export default function GameInviteListener() {
           });
         }
       )
-      // My sent invitation was accepted
+      // My sent invitation was responded to
       .on(
         'postgres_changes',
         {
@@ -60,15 +59,20 @@ export default function GameInviteListener() {
         },
         async (payload) => {
           const inv = payload.new;
-          if (inv.status === 'accepted') {
-            // Create game session and navigate
-            try {
-              const session = await createGame(inv.game_type, user.id, inv.receiver_id);
+          if (inv.status === 'accepted' && inv.session_id) {
+            // Fetch the session created by the receiver
+            const { data: session } = await supabase
+              .from('game_sessions')
+              .select('*')
+              .eq('id', inv.session_id)
+              .single();
+
+            if (session) {
+              // Join as player1 (sender is always player1)
+              joinGame(session, user.id);
               cancelInvite();
               const gameSlug = inv.game_type.replaceAll('_', '-');
               navigate(`/game/${gameSlug}/${session.id}`);
-            } catch (err) {
-              console.error('Failed to start game after accept:', err);
             }
           } else if (inv.status === 'declined') {
             cancelInvite();
@@ -80,26 +84,40 @@ export default function GameInviteListener() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, navigate, createGame, cancelInvite]);
+  }, [user?.id, navigate, joinGame, cancelInvite]);
 
   const handleAccept = useCallback(async () => {
     if (!invite) return;
     try {
-      // Update invitation status
+      // Receiver creates the game session (sender=player1, receiver=player2)
+      const { data: session, error: sessionError } = await supabase
+        .from('game_sessions')
+        .insert({
+          game_type: invite.gameType.replaceAll('_', '-'),
+          player1_id: invite.senderId,
+          player2_id: user.id,
+          status: 'playing',
+        })
+        .select()
+        .single();
+
+      if (sessionError) throw sessionError;
+
+      // Update invitation with session_id so sender can join
       await supabase
         .from('game_invitations')
-        .update({ status: 'accepted' })
+        .update({ status: 'accepted', session_id: session.id })
         .eq('id', invite.id);
 
-      // Create game session (inviter is player1)
-      const session = await createGame(invite.gameType, invite.senderId, user.id);
+      // Join as player2
+      joinGame(session, user.id);
       setInvite(null);
       const gameSlug = invite.gameType.replaceAll('_', '-');
       navigate(`/game/${gameSlug}/${session.id}`);
     } catch (err) {
       console.error('Failed to accept invite:', err);
     }
-  }, [invite, user?.id, createGame, navigate]);
+  }, [invite, user?.id, joinGame, navigate]);
 
   const handleDecline = useCallback(async () => {
     if (!invite) return;

@@ -6,16 +6,15 @@ import { useGameStore } from '../../../stores/gameStore';
 import { useProfileStore } from '../../../stores/profileStore';
 import { useMatchHistoryStore } from '../../../stores/matchHistoryStore';
 import { playSound } from '../../../lib/audioManager';
-import { isDemoMode } from '../../../services/supabase';
 import {
   createEmptyBoard,
   makeMove,
   checkWin,
   checkDraw,
   isValidMove,
-  getGameResult,
   getAiMove,
 } from '../../../lib/ticTacToeLogic';
+import { joinGameChannel, sendGameEvent, leaveGameChannel } from '../../../services/gameChannelService';
 import GameLayout from '../GameLayout';
 import Board from './Board';
 import './TicTacToe.css';
@@ -23,7 +22,6 @@ import './TicTacToe.css';
 const GAME_TYPE = GAME_TYPES.TIC_TAC_TOE;
 const INFO = GAME_INFO[GAME_TYPE];
 
-// Game phases
 const PHASE = {
   PLAYING: 'playing',
   WIN: 'win',
@@ -34,23 +32,62 @@ export default function TicTacToePage() {
   const navigate = useNavigate();
   const { sessionId } = useParams();
   const { user } = useAuthStore();
-  const { setScores } = useGameStore();
+  const { currentSession, setScores } = useGameStore();
   const { addLocalPoints, incrementGamesPlayed, incrementGamesWon } = useProfileStore();
   const { addMatch } = useMatchHistoryStore();
   const pointsAwarded = useRef(false);
 
   const [board, setBoard] = useState(createEmptyBoard());
-  const [isMyTurn, setIsMyTurn] = useState(true); // Player always starts as X
+  const [isMyTurn, setIsMyTurn] = useState(false);
   const [phase, setPhase] = useState(PHASE.PLAYING);
-  const [winData, setWinData] = useState(null); // { winner, combo }
+  const [winData, setWinData] = useState(null);
   const [moveCount, setMoveCount] = useState(0);
   const [showResult, setShowResult] = useState(false);
 
   const aiThinking = useRef(false);
 
-  const myPiece = 'X';
-  const opponentPiece = 'O';
-  const opponentName = isDemoMode ? 'Luna ⭐' : 'Oponente';
+  // Determine role from session
+  const isMultiplayer = !!currentSession?.player2_id;
+  const isPlayer1 = currentSession?.player1_id === user?.id;
+  const myPiece = isPlayer1 ? 'X' : 'O';
+  const opponentPiece = isPlayer1 ? 'O' : 'X';
+  const opponentName = isMultiplayer ? 'Oponente' : 'Luna ⭐';
+
+  // Player1 (X) always starts
+  useEffect(() => {
+    setIsMyTurn(isPlayer1);
+  }, [isPlayer1]);
+
+  // ── Multiplayer: join channel ──
+  useEffect(() => {
+    if (!isMultiplayer || !sessionId || !user?.id) return;
+
+    const cleanup = joinGameChannel(sessionId, user.id, (type, data) => {
+      if (type === 'move') {
+        // Opponent made a move
+        setBoard((prevBoard) => {
+          const newBoard = makeMove(prevBoard, data.cellIndex, data.piece);
+
+          // Check result after opponent's move
+          const { winner, combo } = checkWin(newBoard);
+          if (winner) {
+            setWinData({ winner, combo });
+            setPhase(PHASE.WIN);
+          } else if (checkDraw(newBoard)) {
+            setPhase(PHASE.DRAW);
+          } else {
+            setIsMyTurn(true);
+          }
+
+          return newBoard;
+        });
+        setMoveCount((c) => c + 1);
+        playSound('move');
+      }
+    });
+
+    return cleanup;
+  }, [isMultiplayer, sessionId, user?.id]);
 
   // Handle player move
   const handleCellClick = useCallback(
@@ -62,6 +99,11 @@ export default function TicTacToePage() {
       setBoard(newBoard);
       setMoveCount((c) => c + 1);
       playSound('move');
+
+      // Send move to opponent
+      if (isMultiplayer) {
+        sendGameEvent('move', { cellIndex, piece: myPiece }, user.id);
+      }
 
       // Check result
       const { winner, combo } = checkWin(newBoard);
@@ -77,15 +119,16 @@ export default function TicTacToePage() {
 
       setIsMyTurn(false);
     },
-    [board, phase, isMyTurn, myPiece]
+    [board, phase, isMyTurn, myPiece, isMultiplayer, user?.id]
   );
 
-  // AI opponent move (demo mode)
+  // AI opponent move (only in singleplayer)
   useEffect(() => {
+    if (isMultiplayer) return;
     if (phase !== PHASE.PLAYING || isMyTurn || aiThinking.current) return;
 
     aiThinking.current = true;
-    const delay = 600 + Math.random() * 800; // 0.6-1.4s "thinking"
+    const delay = 600 + Math.random() * 800;
 
     const timer = setTimeout(() => {
       const aiCell = getAiMove(board, opponentPiece);
@@ -119,7 +162,7 @@ export default function TicTacToePage() {
       clearTimeout(timer);
       aiThinking.current = false;
     };
-  }, [board, phase, isMyTurn, opponentPiece]);
+  }, [board, phase, isMyTurn, opponentPiece, isMultiplayer]);
 
   // Show result screen after game ends
   useEffect(() => {
@@ -169,6 +212,11 @@ export default function TicTacToePage() {
     }
   }, [phase, winData, myPiece, setScores]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => leaveGameChannel();
+  }, []);
+
   const getResultMessage = () => {
     if (phase === PHASE.WIN) {
       return winData?.winner === myPiece
@@ -189,7 +237,7 @@ export default function TicTacToePage() {
 
   const handlePlayAgain = () => {
     setBoard(createEmptyBoard());
-    setIsMyTurn(true);
+    setIsMyTurn(isPlayer1);
     setPhase(PHASE.PLAYING);
     setWinData(null);
     setMoveCount(0);
@@ -198,6 +246,7 @@ export default function TicTacToePage() {
   };
 
   const handleGoLobby = () => {
+    leaveGameChannel();
     navigate('/lobby');
   };
 
@@ -243,12 +292,12 @@ export default function TicTacToePage() {
         {/* Player labels */}
         <div className="ttt-players">
           <div className={`ttt-player ${isMyTurn && phase === PHASE.PLAYING ? 'active' : ''}`}>
-            <span className="ttt-player-piece">❌</span>
+            <span className="ttt-player-piece">{myPiece === 'X' ? '❌' : '⭕'}</span>
             <span className="ttt-player-name">Tú</span>
           </div>
           <span className="ttt-vs">VS</span>
           <div className={`ttt-player ${!isMyTurn && phase === PHASE.PLAYING ? 'active' : ''}`}>
-            <span className="ttt-player-piece">⭕</span>
+            <span className="ttt-player-piece">{opponentPiece === 'X' ? '❌' : '⭕'}</span>
             <span className="ttt-player-name">{opponentName}</span>
           </div>
         </div>
@@ -267,9 +316,11 @@ export default function TicTacToePage() {
               <h2 className="ttt-result-title">{getResultMessage()}</h2>
               <p className="ttt-result-points">{getResultPoints()}</p>
               <div className="ttt-result-actions">
-                <button className="btn btn-primary btn-full" onClick={handlePlayAgain}>
-                  Jugar de nuevo 🔄
-                </button>
+                {!isMultiplayer && (
+                  <button className="btn btn-primary btn-full" onClick={handlePlayAgain}>
+                    Jugar de nuevo 🔄
+                  </button>
+                )}
                 <button className="btn btn-ghost btn-full" onClick={handleGoLobby}>
                   Volver al lobby
                 </button>

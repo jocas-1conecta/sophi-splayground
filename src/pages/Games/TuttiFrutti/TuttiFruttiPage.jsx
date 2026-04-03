@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { GAME_TYPES, GAME_INFO, TUTTI_FRUTTI_CATEGORIES } from '../../../constants/gameConfig';
 import {
   pickLetter,
@@ -7,10 +7,12 @@ import {
   determineMatchWinner,
   generateAiAnswers,
 } from '../../../lib/tuttiFruttiLogic';
+import { useAuthStore } from '../../../stores/authStore';
 import { useGameStore } from '../../../stores/gameStore';
 import { useProfileStore } from '../../../stores/profileStore';
 import { useMatchHistoryStore } from '../../../stores/matchHistoryStore';
 import { playSound } from '../../../lib/audioManager';
+import { joinGameChannel, sendGameEvent, leaveGameChannel } from '../../../services/gameChannelService';
 import GameLayout from '../GameLayout';
 import LetterSpinner from './LetterSpinner';
 import AnswerGrid from './AnswerGrid';
@@ -19,13 +21,13 @@ import './TuttiFrutti.css';
 
 const GAME_TYPE = GAME_TYPES.TUTTI_FRUTTI;
 const INFO = GAME_INFO[GAME_TYPE];
-const TIMER_SECONDS = INFO.timerSeconds; // 90s
-const TOTAL_ROUNDS = INFO.roundsPerGame; // 3
+const TIMER_SECONDS = INFO.timerSeconds;
+const TOTAL_ROUNDS = INFO.roundsPerGame;
 
 const PHASE = {
   LETTER_SPIN: 'letter_spin',
   FILLING: 'filling',
-  BASTA_COUNTDOWN: 'basta_countdown', // 10s after BASTA
+  BASTA_COUNTDOWN: 'basta_countdown',
   WAITING: 'waiting',
   REVEAL: 'reveal',
   GAME_OVER: 'game_over',
@@ -39,9 +41,14 @@ const emptyAnswers = () => {
 
 export default function TuttiFruttiPage() {
   const navigate = useNavigate();
-  const { setScores } = useGameStore();
+  const { sessionId } = useParams();
+  const { user } = useAuthStore();
+  const { currentSession, setScores } = useGameStore();
   const { addLocalPoints, incrementGamesPlayed, incrementGamesWon } = useProfileStore();
   const { addMatch } = useMatchHistoryStore();
+
+  const isMultiplayer = !!currentSession?.player2_id;
+  const isPlayer1 = currentSession?.player1_id === user?.id;
 
   // Match state
   const [currentRound, setCurrentRound] = useState(0);
@@ -57,21 +64,53 @@ export default function TuttiFruttiPage() {
   const [roundP1, setRoundP1] = useState(0);
   const [roundP2, setRoundP2] = useState(0);
 
-  // Match scores (cumulative across rounds)
+  // Multiplayer state
+  const [opponentAnswers, setOpponentAnswers] = useState(null);
+  const [mySubmitted, setMySubmitted] = useState(false);
+
+  // Match scores
   const [totalP1, setTotalP1] = useState(0);
   const [totalP2, setTotalP2] = useState(0);
   const [roundHistory, setRoundHistory] = useState([]);
 
   const timerRef = useRef(null);
-  const opponentName = 'Luna ⭐';
+  const opponentName = isMultiplayer ? 'Oponente' : 'Luna ⭐';
+
+  // ── Multiplayer channel ──
+  useEffect(() => {
+    if (!isMultiplayer || !sessionId || !user?.id) return;
+
+    const cleanup = joinGameChannel(sessionId, user.id, (type, data) => {
+      if (type === 'letter') {
+        setCurrentLetter(data.letter);
+      } else if (type === 'basta') {
+        setBastaPressed(true);
+        clearInterval(timerRef.current);
+        setPhase(PHASE.BASTA_COUNTDOWN);
+        setTimer(10);
+        playSound('basta');
+      } else if (type === 'submit_answers') {
+        setOpponentAnswers(data.answers);
+      }
+    });
+
+    return cleanup;
+  }, [isMultiplayer, sessionId, user?.id]);
 
   // ── Pick letter for current round ──
   useEffect(() => {
     if (phase === PHASE.LETTER_SPIN) {
-      const letter = pickLetter(usedLetters);
-      setCurrentLetter(letter);
+      if (isMultiplayer && isPlayer1) {
+        const letter = pickLetter(usedLetters);
+        setCurrentLetter(letter);
+        sendGameEvent('letter', { letter }, user.id);
+      } else if (!isMultiplayer) {
+        const letter = pickLetter(usedLetters);
+        setCurrentLetter(letter);
+      }
+      // Player2 waits for the 'letter' event
     }
-  }, [phase, usedLetters]);
+  }, [phase, usedLetters, isMultiplayer, isPlayer1]);
 
   // ── Timer countdown ──
   useEffect(() => {
@@ -91,7 +130,6 @@ export default function TuttiFruttiPage() {
     return () => clearInterval(timerRef.current);
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Letter revealed → start filling ──
   const handleLetterRevealed = useCallback(() => {
     setPhase(PHASE.FILLING);
     setTimer(TIMER_SECONDS);
@@ -104,42 +142,77 @@ export default function TuttiFruttiPage() {
     clearInterval(timerRef.current);
     playSound('basta');
 
-    // Give opponent 10 more seconds
+    if (isMultiplayer) {
+      sendGameEvent('basta', {}, user.id);
+    }
+
     setPhase(PHASE.BASTA_COUNTDOWN);
     setTimer(10);
-  }, [bastaPressed]);
+  }, [bastaPressed, isMultiplayer, user?.id]);
+
+  // ── Evaluate round: check if both players submitted (multiplayer) ──
+  useEffect(() => {
+    if (!isMultiplayer || !mySubmitted || !opponentAnswers) return;
+
+    const myAns = isPlayer1 ? answers : opponentAnswers;
+    const theirAns = isPlayer1 ? opponentAnswers : answers;
+
+    const result = scoreRound(myAns, theirAns, currentLetter, TUTTI_FRUTTI_CATEGORIES);
+
+    setRoundDetails(result.details);
+    setRoundP1(result.p1Total);
+    setRoundP2(result.p2Total);
+
+    setRoundHistory((prev) => [...prev, {
+      round: currentRound + 1,
+      letter: currentLetter,
+      p1: result.p1Total,
+      p2: result.p2Total,
+    }]);
+
+    setPhase(PHASE.REVEAL);
+    playSound('reveal');
+  }, [mySubmitted, opponentAnswers, isMultiplayer]);
 
   // ── Time's up → evaluate ──
   const handleTimeUp = useCallback(() => {
     clearInterval(timerRef.current);
-    setPhase(PHASE.WAITING);
 
-    // Generate AI answers after a short delay
-    setTimeout(() => {
-      const aiAnswers = generateAiAnswers(currentLetter, TUTTI_FRUTTI_CATEGORIES);
+    if (isMultiplayer) {
+      // Submit my answers to opponent
+      if (!mySubmitted) {
+        setMySubmitted(true);
+        sendGameEvent('submit_answers', { answers }, user.id);
+      }
+      setPhase(PHASE.WAITING);
+    } else {
+      // Singleplayer: AI answers
+      setPhase(PHASE.WAITING);
+      setTimeout(() => {
+        const aiAnswers = generateAiAnswers(currentLetter, TUTTI_FRUTTI_CATEGORIES);
+        const result = scoreRound(answers, aiAnswers, currentLetter, TUTTI_FRUTTI_CATEGORIES);
 
-      const result = scoreRound(
-        answers,
-        aiAnswers,
-        currentLetter,
-        TUTTI_FRUTTI_CATEGORIES
-      );
+        setRoundDetails(result.details);
+        setRoundP1(result.p1Total);
+        setRoundP2(result.p2Total);
 
-      setRoundDetails(result.details);
-      setRoundP1(result.p1Total);
-      setRoundP2(result.p2Total);
+        setRoundHistory((prev) => [...prev, {
+          round: currentRound + 1,
+          letter: currentLetter,
+          p1: result.p1Total,
+          p2: result.p2Total,
+        }]);
 
-      setRoundHistory((prev) => [...prev, {
-        round: currentRound + 1,
-        letter: currentLetter,
-        p1: result.p1Total,
-        p2: result.p2Total,
-      }]);
+        setPhase(PHASE.REVEAL);
+        playSound('reveal');
+      }, 800);
+    }
+  }, [answers, currentLetter, currentRound, isMultiplayer, mySubmitted, user?.id]);
 
-      setPhase(PHASE.REVEAL);
-      playSound('reveal');
-    }, 800);
-  }, [answers, currentLetter, currentRound]);
+  const handleSubmit = useCallback(() => {
+    clearInterval(timerRef.current);
+    handleTimeUp();
+  }, [handleTimeUp]);
 
   // ── Reveal complete → next round or game over ──
   const handleRevealComplete = useCallback(() => {
@@ -151,25 +224,19 @@ export default function TuttiFruttiPage() {
     if (currentRound + 1 >= TOTAL_ROUNDS) {
       setPhase(PHASE.GAME_OVER);
     } else {
-      // Next round
       setCurrentRound((r) => r + 1);
       setUsedLetters((prev) => [...prev, currentLetter]);
       setAnswers(emptyAnswers());
       setBastaPressed(false);
       setRoundDetails(null);
+      setMySubmitted(false);
+      setOpponentAnswers(null);
       setPhase(PHASE.LETTER_SPIN);
     }
   }, [currentRound, currentLetter, totalP1, totalP2, roundP1, roundP2]);
 
-  // ── Submit manually (before timer ends) ──
-  const handleSubmit = useCallback(() => {
-    clearInterval(timerRef.current);
-    handleTimeUp();
-  }, [handleTimeUp]);
-
   const pointsAwarded = useRef(false);
 
-  // ── Update store scores + award points on game over ──
   useEffect(() => {
     if (phase !== PHASE.GAME_OVER || pointsAwarded.current) return;
 
@@ -205,6 +272,10 @@ export default function TuttiFruttiPage() {
     pointsAwarded.current = true;
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    return () => leaveGameChannel();
+  }, []);
+
   const handlePlayAgain = () => {
     setCurrentRound(0);
     setUsedLetters([]);
@@ -217,6 +288,8 @@ export default function TuttiFruttiPage() {
     setTotalP1(0);
     setTotalP2(0);
     setRoundHistory([]);
+    setMySubmitted(false);
+    setOpponentAnswers(null);
     pointsAwarded.current = false;
   };
 
@@ -228,7 +301,6 @@ export default function TuttiFruttiPage() {
   return (
     <GameLayout gameType={GAME_TYPE}>
       <div className="tf-container">
-        {/* Round indicator */}
         <div className="tf-round-info">
           <span className="tf-round-badge animate-fade-in">
             Ronda {Math.min(currentRound + 1, TOTAL_ROUNDS)} de {TOTAL_ROUNDS}
@@ -238,7 +310,6 @@ export default function TuttiFruttiPage() {
           )}
         </div>
 
-        {/* Cumulative score */}
         <div className="tf-cumulative-score">
           <span className="tf-cs-name">Tú</span>
           <span className="tf-cs-score">{totalP1}</span>
@@ -247,7 +318,6 @@ export default function TuttiFruttiPage() {
           <span className="tf-cs-name">{opponentName}</span>
         </div>
 
-        {/* ── LETTER SPIN ── */}
         {phase === PHASE.LETTER_SPIN && (
           <LetterSpinner
             targetLetter={currentLetter}
@@ -255,10 +325,8 @@ export default function TuttiFruttiPage() {
           />
         )}
 
-        {/* ── FILLING / BASTA COUNTDOWN ── */}
         {(phase === PHASE.FILLING || phase === PHASE.BASTA_COUNTDOWN) && (
           <>
-            {/* Timer */}
             <div className={`tf-timer ${timer <= 10 ? 'danger' : ''} ${phase === PHASE.BASTA_COUNTDOWN ? 'basta-mode' : ''}`}>
               <span className="tf-timer-num">{timer}</span>
               <span className="tf-timer-label">
@@ -266,7 +334,6 @@ export default function TuttiFruttiPage() {
               </span>
             </div>
 
-            {/* Answer grid */}
             <AnswerGrid
               letter={currentLetter}
               answers={answers}
@@ -274,7 +341,6 @@ export default function TuttiFruttiPage() {
               disabled={false}
             />
 
-            {/* Action buttons */}
             <div className="tf-actions">
               {!bastaPressed && (
                 <button className="btn tf-basta-btn" onClick={handleBasta}>
@@ -288,15 +354,13 @@ export default function TuttiFruttiPage() {
           </>
         )}
 
-        {/* ── WAITING ── */}
         {phase === PHASE.WAITING && (
           <div className="tf-waiting animate-fade-in">
             <span className="tf-waiting-emoji">📝</span>
-            <p>Comparando respuestas...</p>
+            <p>{isMultiplayer ? `Esperando a ${opponentName}...` : 'Comparando respuestas...'}</p>
           </div>
         )}
 
-        {/* ── REVEAL ── */}
         {phase === PHASE.REVEAL && roundDetails && (
           <RevealPhase
             details={roundDetails}
@@ -309,7 +373,6 @@ export default function TuttiFruttiPage() {
           />
         )}
 
-        {/* ── GAME OVER ── */}
         {phase === PHASE.GAME_OVER && (
           <div className="tf-result-overlay animate-fade-in">
             <div className="tf-result-card animate-pop-in">
@@ -317,14 +380,9 @@ export default function TuttiFruttiPage() {
                 {iWon ? '🏆' : matchResult === 'draw' ? '🤝' : '😊'}
               </span>
               <h2 className="tf-result-title">
-                {iWon
-                  ? '¡Ganaste!'
-                  : matchResult === 'draw'
-                  ? '¡Empate!'
-                  : `${opponentName} ganó`}
+                {iWon ? '¡Ganaste!' : matchResult === 'draw' ? '¡Empate!' : `${opponentName} ganó`}
               </h2>
 
-              {/* Round breakdown */}
               <div className="tf-result-rounds">
                 {roundHistory.map((rh) => (
                   <div key={rh.round} className="tf-result-round-row">
@@ -343,18 +401,16 @@ export default function TuttiFruttiPage() {
               </div>
 
               <p className="tf-result-points">
-                {iWon
-                  ? `+${INFO.pointsWin} puntos`
-                  : matchResult === 'draw'
-                  ? `+${INFO.pointsDraw} puntos`
-                  : `+${INFO.pointsLose} puntos`}
+                {iWon ? `+${INFO.pointsWin} puntos` : matchResult === 'draw' ? `+${INFO.pointsDraw} puntos` : `+${INFO.pointsLose} puntos`}
               </p>
 
               <div className="tf-result-actions">
-                <button className="btn btn-primary btn-full" onClick={handlePlayAgain}>
-                  Jugar de nuevo 🔄
-                </button>
-                <button className="btn btn-ghost btn-full" onClick={() => navigate('/lobby')}>
+                {!isMultiplayer && (
+                  <button className="btn btn-primary btn-full" onClick={handlePlayAgain}>
+                    Jugar de nuevo 🔄
+                  </button>
+                )}
+                <button className="btn btn-ghost btn-full" onClick={() => { leaveGameChannel(); navigate('/lobby'); }}>
                   Volver al lobby
                 </button>
               </div>

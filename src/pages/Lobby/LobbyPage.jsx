@@ -170,9 +170,6 @@ export default function LobbyPage() {
     sentInvitation,
     inviteCountdown,
     cancelInvite,
-    pendingInvitation,
-    respondInvite,
-    createGame,
   } = useGameStore();
 
   const [searchParams] = useSearchParams();
@@ -224,25 +221,6 @@ export default function LobbyPage() {
     }
   };
 
-  const handleAcceptInvite = async () => {
-    if (!pendingInvitation) return;
-    try {
-      await respondInvite(pendingInvitation.id, true);
-      const session = await createGame(
-        pendingInvitation.game_type,
-        pendingInvitation.from_id,
-        user.id
-      );
-      navigate(`/game/${pendingInvitation.game_type.replace('_', '-')}/${session.id}`);
-    } catch (err) {
-      console.error('Failed to accept invite:', err);
-    }
-  };
-
-  const handleDeclineInvite = async () => {
-    if (!pendingInvitation) return;
-    await respondInvite(pendingInvitation.id, false);
-  };
 
   return (
     <div className="lobby-page">

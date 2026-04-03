@@ -32,7 +32,7 @@ export async function createGameSession(gameType, player1Id, player2Id) {
   const { data, error } = await supabase
     .from('game_sessions')
     .insert({
-      game_type: gameType,
+      game_type: gameType.replaceAll('_', '-'),
       player1_id: player1Id,
       player2_id: player2Id,
       status: 'waiting',

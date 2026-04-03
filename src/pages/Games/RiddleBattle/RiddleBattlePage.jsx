@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { GAME_TYPES, GAME_INFO } from '../../../constants/gameConfig';
 import { getRandomRiddles } from '../../../constants/riddleBank';
 import {
@@ -13,6 +13,7 @@ import { useGameStore } from '../../../stores/gameStore';
 import { useProfileStore } from '../../../stores/profileStore';
 import { useMatchHistoryStore } from '../../../stores/matchHistoryStore';
 import { playSound } from '../../../lib/audioManager';
+import { joinGameChannel, sendGameEvent, leaveGameChannel } from '../../../services/gameChannelService';
 import GameLayout from '../GameLayout';
 import ScoreTracker from './ScoreTracker';
 import RiddleCard from './RiddleCard';
@@ -20,26 +21,29 @@ import './RiddleBattle.css';
 
 const GAME_TYPE = GAME_TYPES.RIDDLE_BATTLE;
 const INFO = GAME_INFO[GAME_TYPE];
-const TIMER_SECONDS = INFO.timerPerRiddle; // 30s
-const WINS_NEEDED = INFO.winsNeeded; // 3
-const MAX_ROUNDS = INFO.roundsPerGame; // 5
+const TIMER_SECONDS = INFO.timerPerRiddle;
+const WINS_NEEDED = INFO.winsNeeded;
+const MAX_ROUNDS = INFO.roundsPerGame;
 
-// Game phases for each round
 const PHASE = {
-  COUNTDOWN: 'countdown',  // 3-2-1 before round
-  ANSWERING: 'answering',  // Player is typing answer
-  WAITING: 'waiting',      // Waiting for opponent
-  REVEAL: 'reveal',        // Show who won the round
-  GAME_OVER: 'game_over',  // Match finished
+  COUNTDOWN: 'countdown',
+  ANSWERING: 'answering',
+  WAITING: 'waiting',
+  REVEAL: 'reveal',
+  GAME_OVER: 'game_over',
 };
 
 export default function RiddleBattlePage() {
   const navigate = useNavigate();
+  const { sessionId } = useParams();
   const { user } = useAuthStore();
-  const { setScores } = useGameStore();
+  const { currentSession, setScores } = useGameStore();
   const { addLocalPoints, incrementGamesPlayed, incrementGamesWon } = useProfileStore();
   const { addMatch } = useMatchHistoryStore();
   const pointsAwarded = useRef(false);
+
+  const isMultiplayer = !!currentSession?.player2_id;
+  const isPlayer1 = currentSession?.player1_id === user?.id;
 
   // Game state
   const [riddles, setRiddles] = useState([]);
@@ -59,30 +63,107 @@ export default function RiddleBattlePage() {
   const [roundResult, setRoundResult] = useState(null);
   const [showHint, setShowHint] = useState(false);
 
+  // Multiplayer state
+  const [opponentAnswer, setOpponentAnswer] = useState(null);
+
   // Refs
   const roundStartTime = useRef(Date.now());
   const timerInterval = useRef(null);
   const inputRef = useRef(null);
 
-  const opponentName = 'Luna ⭐';
+  const opponentName = isMultiplayer ? 'Oponente' : 'Luna ⭐';
+
+  // ── Multiplayer channel ──
+  useEffect(() => {
+    if (!isMultiplayer || !sessionId || !user?.id) return;
+
+    const cleanup = joinGameChannel(sessionId, user.id, (type, data) => {
+      if (type === 'riddles') {
+        setRiddles(data.riddles);
+      } else if (type === 'submit_answer') {
+        setOpponentAnswer(data);
+      }
+    });
+
+    return cleanup;
+  }, [isMultiplayer, sessionId, user?.id]);
 
   // ── Load riddles on mount ──
   useEffect(() => {
     const loaded = getRandomRiddles(MAX_ROUNDS);
     setRiddles(loaded);
-  }, []);
+
+    if (isMultiplayer && isPlayer1) {
+      // Small delay to ensure channel is ready
+      setTimeout(() => {
+        sendGameEvent('riddles', { riddles: loaded }, user?.id);
+      }, 500);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Evaluate round when both answers in (multiplayer) ──
+  useEffect(() => {
+    if (!isMultiplayer || !answerSubmitted || !opponentAnswer) return;
+
+    const currentRiddle = riddles[currentRound];
+    if (!currentRiddle) return;
+
+    const myData = { answer, timeMs: answerTimeMs };
+    const theirData = { answer: opponentAnswer.answer, timeMs: opponentAnswer.timeMs };
+
+    // Perspective matters: if I'm player1, my data is p1
+    const p1Data = isPlayer1 ? myData : theirData;
+    const p2Data = isPlayer1 ? theirData : myData;
+
+    const result = determineRoundWinner(p1Data, p2Data, currentRiddle.answer);
+
+    const iAmPlayer = isPlayer1 ? 'player1' : 'player2';
+    const opponentPlayer = isPlayer1 ? 'player2' : 'player1';
+
+    setRoundResult({
+      ...result,
+      myAnswer: answer,
+      aiAnswer: opponentAnswer.answer,
+      myTime: answerTimeMs,
+      aiTime: opponentAnswer.timeMs,
+    });
+
+    let newP1 = p1Wins;
+    let newP2 = p2Wins;
+
+    if (result.winner === 'player1') {
+      newP1 = p1Wins + 1;
+      setP1Wins(newP1);
+    } else if (result.winner === 'player2') {
+      newP2 = p2Wins + 1;
+      setP2Wins(newP2);
+    }
+
+    setPhase(PHASE.REVEAL);
+
+    const myResult = result.winner === iAmPlayer;
+    if (myResult) playSound('correct');
+    else if (result.winner === opponentPlayer) playSound('wrong');
+
+    setTimeout(() => {
+      if (isMatchOver(newP1, newP2, currentRound + 1)) {
+        setPhase(PHASE.GAME_OVER);
+      } else {
+        setCurrentRound((r) => r + 1);
+        resetRound();
+      }
+    }, 3000);
+  }, [answerSubmitted, opponentAnswer, isMultiplayer]);
 
   // ── Countdown (3-2-1) ──
   useEffect(() => {
     if (phase !== PHASE.COUNTDOWN) return;
-
     if (countdown <= 0) {
       setPhase(PHASE.ANSWERING);
       roundStartTime.current = Date.now();
       setTimer(TIMER_SECONDS);
       return;
     }
-
     const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(t);
   }, [phase, countdown]);
@@ -94,7 +175,6 @@ export default function RiddleBattlePage() {
     timerInterval.current = setInterval(() => {
       setTimer((t) => {
         if (t <= 1) {
-          // Time's up — auto-submit empty
           clearInterval(timerInterval.current);
           handleSubmitAnswer('', TIMER_SECONDS * 1000);
           return 0;
@@ -103,20 +183,14 @@ export default function RiddleBattlePage() {
       });
     }, 1000);
 
-    // Focus input
     setTimeout(() => inputRef.current?.focus(), 100);
-
     return () => clearInterval(timerInterval.current);
   }, [phase, currentRound]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Show hint at 15s ──
   useEffect(() => {
-    if (phase === PHASE.ANSWERING && timer <= 15 && !showHint) {
-      setShowHint(true);
-    }
-    if (phase === PHASE.ANSWERING && timer <= 10 && timer > 0) {
-      playSound('countdown');
-    }
+    if (phase === PHASE.ANSWERING && timer <= 15 && !showHint) setShowHint(true);
+    if (phase === PHASE.ANSWERING && timer <= 10 && timer > 0) playSound('countdown');
   }, [phase, timer, showHint]);
 
   // ── Submit answer ──
@@ -130,65 +204,64 @@ export default function RiddleBattlePage() {
     setAnswerTimeMs(finalTime);
     clearInterval(timerInterval.current);
 
-    setPhase(PHASE.WAITING);
+    if (isMultiplayer) {
+      sendGameEvent('submit_answer', { answer: finalAnswer, timeMs: finalTime }, user.id);
+      setPhase(PHASE.WAITING);
+    } else {
+      // Singleplayer AI
+      setPhase(PHASE.WAITING);
 
-    // Simulate AI response after 0.8-2s
-    const aiDelay = 800 + Math.random() * 1200;
-    setTimeout(() => {
-      const currentRiddle = riddles[currentRound];
-      if (!currentRiddle) return;
-
-      // AI answers correctly ~55% of the time, with random speed
-      const aiCorrectChance = Math.random();
-      const aiAnswer = aiCorrectChance < 0.55 ? currentRiddle.answer : 'no sé';
-      const aiTime = 3000 + Math.random() * (TIMER_SECONDS * 1000 - 5000); // 3-25s
-
-      // Determine round winner
-      const result = determineRoundWinner(
-        { answer: finalAnswer, timeMs: finalTime },
-        { answer: aiAnswer, timeMs: aiTime },
-        currentRiddle.answer
-      );
-
-      setRoundResult({
-        ...result,
-        myAnswer: finalAnswer,
-        aiAnswer: aiAnswer,
-        myTime: finalTime,
-        aiTime: aiTime,
-      });
-
-      // Update wins
-      let newP1 = p1Wins;
-      let newP2 = p2Wins;
-
-      if (result.winner === 'player1') {
-        newP1 = p1Wins + 1;
-        setP1Wins(newP1);
-      } else if (result.winner === 'player2') {
-        newP2 = p2Wins + 1;
-        setP2Wins(newP2);
-      }
-
-      setPhase(PHASE.REVEAL);
-
-      // Sound feedback
-      if (result.winner === 'player1') playSound('correct');
-      else if (result.winner === 'player2') playSound('wrong');
-
-      // After reveal, check if match is over
+      const aiDelay = 800 + Math.random() * 1200;
       setTimeout(() => {
-        if (isMatchOver(newP1, newP2, currentRound + 1)) {
-          setPhase(PHASE.GAME_OVER);
-        } else {
-          // Next round
-          const nextRound = currentRound + 1;
-          setCurrentRound(nextRound);
-          resetRound();
+        const currentRiddle = riddles[currentRound];
+        if (!currentRiddle) return;
+
+        const aiCorrectChance = Math.random();
+        const aiAnswer = aiCorrectChance < 0.55 ? currentRiddle.answer : 'no sé';
+        const aiTime = 3000 + Math.random() * (TIMER_SECONDS * 1000 - 5000);
+
+        const result = determineRoundWinner(
+          { answer: finalAnswer, timeMs: finalTime },
+          { answer: aiAnswer, timeMs: aiTime },
+          currentRiddle.answer
+        );
+
+        setRoundResult({
+          ...result,
+          myAnswer: finalAnswer,
+          aiAnswer: aiAnswer,
+          myTime: finalTime,
+          aiTime: aiTime,
+        });
+
+        let newP1 = p1Wins;
+        let newP2 = p2Wins;
+
+        if (result.winner === 'player1') {
+          newP1 = p1Wins + 1;
+          setP1Wins(newP1);
+        } else if (result.winner === 'player2') {
+          newP2 = p2Wins + 1;
+          setP2Wins(newP2);
         }
-      }, 3000);
-    }, aiDelay);
-  }, [answer, answerSubmitted, currentRound, riddles, p1Wins, p2Wins]); // eslint-disable-line react-hooks/exhaustive-deps
+
+        setPhase(PHASE.REVEAL);
+
+        if (result.winner === 'player1') playSound('correct');
+        else if (result.winner === 'player2') playSound('wrong');
+
+        setTimeout(() => {
+          if (isMatchOver(newP1, newP2, currentRound + 1)) {
+            setPhase(PHASE.GAME_OVER);
+          } else {
+            const nextRound = currentRound + 1;
+            setCurrentRound(nextRound);
+            resetRound();
+          }
+        }, 3000);
+      }, aiDelay);
+    }
+  }, [answer, answerSubmitted, currentRound, riddles, p1Wins, p2Wins, isMultiplayer, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resetRound = () => {
     setPhase(PHASE.COUNTDOWN);
@@ -199,6 +272,7 @@ export default function RiddleBattlePage() {
     setAnswerTimeMs(null);
     setRoundResult(null);
     setShowHint(false);
+    setOpponentAnswer(null);
   };
 
   const handleSubmitClick = () => {
@@ -210,18 +284,20 @@ export default function RiddleBattlePage() {
     if (e.key === 'Enter') handleSubmitClick();
   };
 
-  // ── Update scores + award points ──
+  // ── Award points on game over ──
   useEffect(() => {
     if (phase !== PHASE.GAME_OVER || pointsAwarded.current) return;
 
     setScores({ player1: p1Wins, player2: p2Wins });
 
     const winner = checkBO5Winner(p1Wins, p2Wins);
+    const iAmPlayer1 = isPlayer1 || !isMultiplayer;
     let result, pts;
+
     if (!winner || winner === 'draw') {
       result = 'draw';
       pts = INFO.pointsDraw;
-    } else if (winner === 'player1') {
+    } else if ((winner === 'player1' && iAmPlayer1) || (winner === 'player2' && !iAmPlayer1)) {
       result = 'win';
       pts = INFO.pointsWin;
       incrementGamesWon();
@@ -244,8 +320,13 @@ export default function RiddleBattlePage() {
     pointsAwarded.current = true;
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    return () => leaveGameChannel();
+  }, []);
+
   const matchWinner = checkBO5Winner(p1Wins, p2Wins);
-  const iWon = matchWinner === 'player1';
+  const iAmPlayer1 = isPlayer1 || !isMultiplayer;
+  const iWon = (matchWinner === 'player1' && iAmPlayer1) || (matchWinner === 'player2' && !iAmPlayer1);
   const currentRiddle = riddles[currentRound];
 
   const getResultMessage = () => {
@@ -282,7 +363,6 @@ export default function RiddleBattlePage() {
   return (
     <GameLayout gameType={GAME_TYPE}>
       <div className="rb-container">
-        {/* Score tracker */}
         <ScoreTracker
           p1Wins={p1Wins}
           p2Wins={p2Wins}
@@ -292,22 +372,18 @@ export default function RiddleBattlePage() {
           p2Name={opponentName}
         />
 
-        {/* Round indicator */}
         <div className="rb-round-badge animate-fade-in">
           <span>Ronda {Math.min(currentRound + 1, MAX_ROUNDS)} de {MAX_ROUNDS}</span>
         </div>
 
-        {/* ── COUNTDOWN ── */}
         {phase === PHASE.COUNTDOWN && (
           <div className="rb-countdown animate-pop-in" key={`cd-${countdown}`}>
             <span className="rb-countdown-num">{countdown || '¡Ya!'}</span>
           </div>
         )}
 
-        {/* ── ANSWERING ── */}
         {(phase === PHASE.ANSWERING || phase === PHASE.WAITING) && (
           <>
-            {/* Timer ring */}
             <div className="rb-timer">
               <svg className="rb-timer-svg" viewBox="0 0 100 100">
                 <circle className="rb-timer-bg" cx="50" cy="50" r="45" />
@@ -325,10 +401,8 @@ export default function RiddleBattlePage() {
               </span>
             </div>
 
-            {/* Riddle card */}
             <RiddleCard riddle={currentRiddle} showHint={showHint} showAnswer={false} />
 
-            {/* Answer input */}
             {phase === PHASE.ANSWERING ? (
               <div className="rb-answer-area animate-fade-in-up">
                 <div className="rb-input-row">
@@ -361,13 +435,11 @@ export default function RiddleBattlePage() {
           </>
         )}
 
-        {/* ── REVEAL ── */}
         {phase === PHASE.REVEAL && roundResult && (
           <div className="rb-reveal animate-fade-in-up">
             <RiddleCard riddle={currentRiddle} showAnswer={true} showHint={false} />
 
             <div className="rb-reveal-results">
-              {/* My result */}
               <div className={`rb-reveal-player ${roundResult.p1Correct ? 'correct' : 'wrong'}`}>
                 <span className="rb-reveal-icon">{roundResult.p1Correct ? '✅' : '❌'}</span>
                 <span className="rb-reveal-name">Tú</span>
@@ -379,7 +451,6 @@ export default function RiddleBattlePage() {
                 )}
               </div>
 
-              {/* AI result */}
               <div className={`rb-reveal-player ${roundResult.p2Correct ? 'correct' : 'wrong'}`}>
                 <span className="rb-reveal-icon">{roundResult.p2Correct ? '✅' : '❌'}</span>
                 <span className="rb-reveal-name">{opponentName}</span>
@@ -392,11 +463,10 @@ export default function RiddleBattlePage() {
               </div>
             </div>
 
-            {/* Round winner */}
             <div className="rb-reveal-winner animate-pop-in">
-              {roundResult.winner === 'player1'
+              {roundResult.winner === (isPlayer1 ? 'player1' : 'player2')
                 ? '🎉 ¡Ganaste la ronda!'
-                : roundResult.winner === 'player2'
+                : roundResult.winner
                 ? `${opponentName} gana la ronda`
                 : '🤷 Nadie acertó — ¡Ronda anulada!'
               }
@@ -404,7 +474,6 @@ export default function RiddleBattlePage() {
           </div>
         )}
 
-        {/* ── GAME OVER ── */}
         {phase === PHASE.GAME_OVER && (
           <div className="rb-result-overlay animate-fade-in">
             <div className="rb-result-card animate-pop-in">
@@ -419,10 +488,12 @@ export default function RiddleBattlePage() {
               </div>
               <p className="rb-result-points">{getResultPoints()}</p>
               <div className="rb-result-actions">
-                <button className="btn btn-primary btn-full" onClick={handlePlayAgain}>
-                  Jugar de nuevo 🔄
-                </button>
-                <button className="btn btn-ghost btn-full" onClick={() => navigate('/lobby')}>
+                {!isMultiplayer && (
+                  <button className="btn btn-primary btn-full" onClick={handlePlayAgain}>
+                    Jugar de nuevo 🔄
+                  </button>
+                )}
+                <button className="btn btn-ghost btn-full" onClick={() => { leaveGameChannel(); navigate('/lobby'); }}>
                   Volver al lobby
                 </button>
               </div>
