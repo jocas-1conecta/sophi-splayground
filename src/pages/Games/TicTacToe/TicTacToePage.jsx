@@ -6,6 +6,7 @@ import { useGameStore } from '../../../stores/gameStore';
 import { useProfileStore } from '../../../stores/profileStore';
 import { useMatchHistoryStore } from '../../../stores/matchHistoryStore';
 import { playSound } from '../../../lib/audioManager';
+import { supabase, isDemoMode } from '../../../services/supabase';
 import {
   createEmptyBoard,
   makeMove,
@@ -32,7 +33,7 @@ export default function TicTacToePage() {
   const navigate = useNavigate();
   const { sessionId } = useParams();
   const { user } = useAuthStore();
-  const { currentSession, setScores } = useGameStore();
+  const { currentSession, joinGame, setScores } = useGameStore();
   const { addLocalPoints, incrementGamesPlayed, incrementGamesWon } = useProfileStore();
   const { addMatch } = useMatchHistoryStore();
   const pointsAwarded = useRef(false);
@@ -43,20 +44,53 @@ export default function TicTacToePage() {
   const [winData, setWinData] = useState(null);
   const [moveCount, setMoveCount] = useState(0);
   const [showResult, setShowResult] = useState(false);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
 
   const aiThinking = useRef(false);
 
+  // ── Load session from DB if not in store (e.g. page refresh) ──
+  useEffect(() => {
+    async function loadSession() {
+      if (currentSession) {
+        setSessionLoaded(true);
+        return;
+      }
+      if (!sessionId || isDemoMode || !supabase || !user?.id) {
+        setSessionLoaded(true);
+        return;
+      }
+      try {
+        const { data: session } = await supabase
+          .from('game_sessions')
+          .select('*')
+          .eq('id', sessionId)
+          .single();
+        if (session && session.player2_id) {
+          joinGame(session, user.id);
+        }
+      } catch (e) {
+        console.error('Failed to load session:', e);
+      }
+      setSessionLoaded(true);
+    }
+    loadSession();
+  }, [sessionId, currentSession, user?.id, joinGame]);
+
   // Determine role from session
   const isMultiplayer = !!currentSession?.player2_id;
-  const isPlayer1 = currentSession?.player1_id === user?.id;
+  const isPlayer1 = isMultiplayer
+    ? currentSession.player1_id === user?.id
+    : true; // singleplayer = always player1
   const myPiece = isPlayer1 ? 'X' : 'O';
   const opponentPiece = isPlayer1 ? 'O' : 'X';
   const opponentName = isMultiplayer ? 'Oponente' : 'Luna ⭐';
 
   // Player1 (X) always starts
   useEffect(() => {
-    setIsMyTurn(isPlayer1);
-  }, [isPlayer1]);
+    if (sessionLoaded) {
+      setIsMyTurn(isPlayer1);
+    }
+  }, [isPlayer1, sessionLoaded]);
 
   // ── Multiplayer: join channel ──
   useEffect(() => {
@@ -64,11 +98,9 @@ export default function TicTacToePage() {
 
     const cleanup = joinGameChannel(sessionId, user.id, (type, data) => {
       if (type === 'move') {
-        // Opponent made a move
         setBoard((prevBoard) => {
           const newBoard = makeMove(prevBoard, data.cellIndex, data.piece);
 
-          // Check result after opponent's move
           const { winner, combo } = checkWin(newBoard);
           if (winner) {
             setWinData({ winner, combo });
@@ -105,7 +137,6 @@ export default function TicTacToePage() {
         sendGameEvent('move', { cellIndex, piece: myPiece }, user.id);
       }
 
-      // Check result
       const { winner, combo } = checkWin(newBoard);
       if (winner) {
         setWinData({ winner, combo });
@@ -122,8 +153,9 @@ export default function TicTacToePage() {
     [board, phase, isMyTurn, myPiece, isMultiplayer, user?.id]
   );
 
-  // AI opponent move (only in singleplayer)
+  // AI opponent (ONLY singleplayer — never in multiplayer)
   useEffect(() => {
+    if (!sessionLoaded) return;
     if (isMultiplayer) return;
     if (phase !== PHASE.PLAYING || isMyTurn || aiThinking.current) return;
 
@@ -162,7 +194,7 @@ export default function TicTacToePage() {
       clearTimeout(timer);
       aiThinking.current = false;
     };
-  }, [board, phase, isMyTurn, opponentPiece, isMultiplayer]);
+  }, [board, phase, isMyTurn, opponentPiece, isMultiplayer, sessionLoaded]);
 
   // Show result screen after game ends
   useEffect(() => {
@@ -171,7 +203,7 @@ export default function TicTacToePage() {
     return () => clearTimeout(timer);
   }, [phase]);
 
-  // Update scores + award points + record match
+  // Update scores + award points
   useEffect(() => {
     if (phase === PHASE.PLAYING || pointsAwarded.current) return;
 
@@ -212,16 +244,25 @@ export default function TicTacToePage() {
     }
   }, [phase, winData, myPiece, setScores]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cleanup on unmount
+  // Cleanup
   useEffect(() => {
     return () => leaveGameChannel();
   }, []);
 
+  // Don't render until session is loaded
+  if (!sessionLoaded) {
+    return (
+      <GameLayout gameType={GAME_TYPE}>
+        <div className="ttt-container" style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
+          <p>Cargando partida...</p>
+        </div>
+      </GameLayout>
+    );
+  }
+
   const getResultMessage = () => {
     if (phase === PHASE.WIN) {
-      return winData?.winner === myPiece
-        ? '¡Ganaste! 🎉'
-        : `${opponentName} ganó 😊`;
+      return winData?.winner === myPiece ? '¡Ganaste! 🎉' : `${opponentName} ganó 😊`;
     }
     return '¡Empate! 🤝';
   };
