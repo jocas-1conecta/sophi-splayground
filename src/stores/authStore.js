@@ -91,6 +91,8 @@ export const useAuthStore = create((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const { user, session } = await authSignUp(email, password, displayName);
+      // Small delay to let DB trigger create the profile
+      await new Promise((r) => setTimeout(r, 500));
       set({ user, session, isLoading: false });
       return { success: true };
     } catch (error) {
@@ -125,9 +127,13 @@ export const useAuthStore = create((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       await authSignOut();
+      // Clear all stores
+      const { useProfileStore } = await import('./profileStore');
+      useProfileStore.getState().clear();
       set({ user: null, session: null, isLoading: false });
     } catch (error) {
-      set({ isLoading: false, error: error.message });
+      // Force clear even on error
+      set({ user: null, session: null, isLoading: false, error: error.message });
     }
   },
 
