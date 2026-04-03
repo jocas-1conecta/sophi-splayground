@@ -7,6 +7,7 @@ import {
   determineMatchWinner,
   generateAiAnswers,
 } from '../../../lib/tuttiFruttiLogic';
+import { loadValidWords } from '../../../services/tuttiFruttiService';
 import { useAuthStore } from '../../../stores/authStore';
 import { useGameStore } from '../../../stores/gameStore';
 import { useProfileStore } from '../../../stores/profileStore';
@@ -48,7 +49,12 @@ export default function TuttiFruttiPage() {
   const { addMatch } = useMatchHistoryStore();
 
   const isMultiplayer = !!currentSession?.player2_id;
-  const isPlayer1 = currentSession?.player1_id === user?.id;
+  const isPlayer1 = isMultiplayer ? currentSession?.player1_id === user?.id : true;
+
+  // Load valid words from DB on mount
+  useEffect(() => {
+    loadValidWords();
+  }, []);
 
   // Match state
   const [currentRound, setCurrentRound] = useState(0);

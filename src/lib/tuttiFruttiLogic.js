@@ -1,7 +1,9 @@
 /* ══════════════════════════════════════════
    TUTTI FRUTTI — Pure Game Logic
-   No side effects, easy to test
+   Validates answers against DB word bank
    ══════════════════════════════════════════ */
+
+import { isWordValid } from '../services/tuttiFruttiService';
 
 /**
  * Available letters (excluding Q, W, X, Y, Z, Ñ)
@@ -20,58 +22,70 @@ export function normalizeAnswer(answer) {
     .trim()
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // remove accents
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, ' ');
 }
 
 /**
- * Validate if an answer starts with the given letter
- * @returns {'valid'|'invalid'|'empty'}
+ * Validate if an answer is valid for the given category and letter.
+ * - 'valid'       → in the DB word bank, full points
+ * - 'maybe_valid' → starts with letter but not in bank, half points
+ * - 'invalid'     → doesn't start with the letter
+ * - 'empty'       → no answer
  */
-export function validateAnswer(answer, letter) {
+export function validateAnswer(answer, letter, categoryId) {
   if (!answer || answer.trim().length === 0) return 'empty';
   const normalized = normalizeAnswer(answer);
   if (!normalized.startsWith(letter.toLowerCase())) return 'invalid';
-  return 'valid';
+
+  // Check against DB word bank
+  if (isWordValid(answer, categoryId, letter)) {
+    return 'valid';
+  }
+
+  return 'maybe_valid';
 }
 
 /**
  * Score a single category
- * @param {string} myAnswer
- * @param {string} opponentAnswer
- * @param {string} letter
- * @returns {{ myPoints: number, myStatus: string }}
  */
-export function scoreCategory(myAnswer, opponentAnswer, letter) {
-  const myValid = validateAnswer(myAnswer, letter);
-  const oppValid = validateAnswer(opponentAnswer, letter);
+export function scoreCategory(myAnswer, opponentAnswer, letter, categoryId) {
+  const myValid = validateAnswer(myAnswer, letter, categoryId);
+  const oppValid = validateAnswer(opponentAnswer, letter, categoryId);
 
-  if (myValid !== 'valid') {
-    return { myPoints: 0, myStatus: myValid }; // 'empty' or 'invalid'
+  if (myValid === 'empty' || myValid === 'invalid') {
+    return { myPoints: 0, myStatus: myValid };
   }
 
-  if (oppValid !== 'valid') {
-    return { myPoints: 10, myStatus: 'unique' }; // opponent empty/invalid → I'm unique
+  // valid = full points, maybe_valid = half points
+  const myMultiplier = myValid === 'valid' ? 1 : 0.5;
+
+  if (oppValid === 'empty' || oppValid === 'invalid') {
+    return {
+      myPoints: Math.round(10 * myMultiplier),
+      myStatus: myValid === 'valid' ? 'unique' : 'maybe_valid',
+    };
   }
 
-  // Both valid → compare
+  // Both have some valid answer → compare
   const myNorm = normalizeAnswer(myAnswer);
   const oppNorm = normalizeAnswer(opponentAnswer);
 
   if (myNorm === oppNorm) {
-    return { myPoints: 5, myStatus: 'shared' }; // same answer
+    return {
+      myPoints: Math.round(5 * myMultiplier),
+      myStatus: 'shared',
+    };
   }
 
-  return { myPoints: 10, myStatus: 'unique' }; // different → unique
+  return {
+    myPoints: Math.round(10 * myMultiplier),
+    myStatus: myValid === 'valid' ? 'unique' : 'maybe_valid',
+  };
 }
 
 /**
  * Score an entire round for both players
- * @param {Object} p1Answers - { nombre: 'X', animal: 'X', ... }
- * @param {Object} p2Answers - { nombre: 'X', animal: 'X', ... }
- * @param {string} letter
- * @param {Array} categories - [{ id: 'nombre', ... }]
- * @returns {{ p1Total: number, p2Total: number, details: Array }}
  */
 export function scoreRound(p1Answers, p2Answers, letter, categories) {
   let p1Total = 0;
@@ -82,8 +96,8 @@ export function scoreRound(p1Answers, p2Answers, letter, categories) {
     const p1Ans = p1Answers[cat.id] || '';
     const p2Ans = p2Answers[cat.id] || '';
 
-    const p1Result = scoreCategory(p1Ans, p2Ans, letter);
-    const p2Result = scoreCategory(p2Ans, p1Ans, letter);
+    const p1Result = scoreCategory(p1Ans, p2Ans, letter, cat.id);
+    const p2Result = scoreCategory(p2Ans, p1Ans, letter, cat.id);
 
     p1Total += p1Result.myPoints;
     p2Total += p2Result.myPoints;
@@ -104,20 +118,15 @@ export function scoreRound(p1Answers, p2Answers, letter, categories) {
 
 /**
  * Pick a random letter, excluding already used ones
- * @param {string[]} usedLetters
- * @returns {string}
  */
 export function pickLetter(usedLetters = []) {
   const available = AVAILABLE_LETTERS.filter((l) => !usedLetters.includes(l));
-  if (available.length === 0) return AVAILABLE_LETTERS[0]; // fallback
+  if (available.length === 0) return AVAILABLE_LETTERS[0];
   return available[Math.floor(Math.random() * available.length)];
 }
 
 /**
  * Determine overall match winner after all rounds
- * @param {number} p1Total
- * @param {number} p2Total
- * @returns {'player1'|'player2'|'draw'}
  */
 export function determineMatchWinner(p1Total, p2Total) {
   if (p1Total > p2Total) return 'player1';
@@ -125,9 +134,9 @@ export function determineMatchWinner(p1Total, p2Total) {
   return 'draw';
 }
 
-/* ── Demo AI Answers ── */
+/* ── Fallback AI Answers (when DB is empty) ── */
 
-const AI_ANSWER_BANK = {
+const FALLBACK_AI = {
   nombre: {
     A: 'Ana', B: 'Beatriz', C: 'Carmen', D: 'Diana', E: 'Elena', F: 'Fernanda',
     G: 'Gabriela', H: 'Helena', I: 'Isabel', J: 'Julia', K: 'Karla', L: 'Laura',
@@ -167,19 +176,14 @@ const AI_ANSWER_BANK = {
 };
 
 /**
- * Generate AI answers for a given letter (demo mode)
- * AI answers ~75% of categories (leaves some empty to simulate thinking)
- * @param {string} letter
- * @param {Array} categories
- * @returns {Object} { nombre: 'X', animal: 'X', ... }
+ * Generate AI answers for a given letter (singleplayer mode)
  */
 export function generateAiAnswers(letter, categories) {
   const answers = {};
   for (const cat of categories) {
-    const bank = AI_ANSWER_BANK[cat.id];
+    const bank = FALLBACK_AI[cat.id];
     const answer = bank?.[letter] || '';
 
-    // AI leaves ~20% blank to seem realistic
     if (answer && Math.random() > 0.2) {
       answers[cat.id] = answer;
     } else {

@@ -290,7 +290,7 @@ export default function RiddleBattlePage() {
 
     setScores({ player1: p1Wins, player2: p2Wins });
 
-    const winner = checkBO5Winner(p1Wins, p2Wins);
+    const winner = checkBO5Winner(p1Wins, p2Wins, currentRound + 1);
     const iAmPlayer1 = isPlayer1 || !isMultiplayer;
     let result, pts;
 
@@ -324,13 +324,13 @@ export default function RiddleBattlePage() {
     return () => leaveGameChannel();
   }, []);
 
-  const matchWinner = checkBO5Winner(p1Wins, p2Wins);
+  const matchWinner = checkBO5Winner(p1Wins, p2Wins, currentRound + 1);
   const iAmPlayer1 = isPlayer1 || !isMultiplayer;
   const iWon = (matchWinner === 'player1' && iAmPlayer1) || (matchWinner === 'player2' && !iAmPlayer1);
   const currentRiddle = riddles[currentRound];
 
   const getResultMessage = () => {
-    if (!matchWinner) return `¡Empate ${p1Wins}-${p2Wins}! 🤝`;
+    if (!matchWinner || matchWinner === 'draw') return `¡Empate ${p1Wins}-${p2Wins}! 🤝`;
     return iWon ? '¡Ganaste la batalla! 🎉' : `${opponentName} ganó 😊`;
   };
 

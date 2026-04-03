@@ -4,6 +4,7 @@ import './TuttiFrutti.css';
 const STATUS_CONFIG = {
   unique: { icon: '✅', label: '+10', className: 'unique' },
   shared: { icon: '🤝', label: '+5', className: 'shared' },
+  maybe_valid: { icon: '🤔', label: '+5', className: 'shared' },
   invalid: { icon: '❌', label: '+0', className: 'invalid' },
   empty: { icon: '➖', label: '+0', className: 'empty' },
 };

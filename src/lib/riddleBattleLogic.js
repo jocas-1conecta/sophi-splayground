@@ -74,15 +74,24 @@ export function determineRoundWinner(p1, p2, correctAnswer) {
 }
 
 /**
- * Check if someone has won the BO5 (3 round wins)
+ * Check if someone has won the BO5 (3 round wins or most wins after 5 rounds)
  * @param {number} p1Wins
  * @param {number} p2Wins
- * @returns {'player1'|'player2'|null}
+ * @param {number} roundsPlayed - optional, used for final determination
+ * @returns {'player1'|'player2'|'draw'|null}
  */
-export function checkBO5Winner(p1Wins, p2Wins) {
+export function checkBO5Winner(p1Wins, p2Wins, roundsPlayed = 0) {
   if (p1Wins >= 3) return 'player1';
   if (p2Wins >= 3) return 'player2';
-  return null;
+
+  // If all 5 rounds are done, whoever has more wins
+  if (roundsPlayed >= 5) {
+    if (p1Wins > p2Wins) return 'player1';
+    if (p2Wins > p1Wins) return 'player2';
+    return 'draw';
+  }
+
+  return null; // match still ongoing
 }
 
 /**
