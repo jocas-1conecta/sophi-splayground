@@ -25,6 +25,7 @@ import RiddleBattlePage from './pages/Games/RiddleBattle/RiddleBattlePage';
 import LoadingScreen from './components/feedback/LoadingScreen';
 import InstallPrompt from './components/ui/InstallPrompt';
 import FriendNotification from './components/ui/FriendNotification';
+import GameInviteListener from './components/ui/GameInviteListener';
 
 function ProtectedRoute({ children }) {
   const { user, isLoading } = useAuthStore();
@@ -122,6 +123,7 @@ export default function App() {
       </Routes>
       <InstallPrompt />
       <FriendNotification />
+      <GameInviteListener />
     </BrowserRouter>
   );
 }

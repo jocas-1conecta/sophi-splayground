@@ -218,24 +218,7 @@ export default function LobbyPage() {
     if (!selectedGame || !selectedFriend || !user) return;
     try {
       await sendInvite(user.id, selectedFriend.id, selectedGame);
-      // In demo mode, simulate acceptance after 2 seconds
-      setTimeout(async () => {
-        const { sentInvitation } = useGameStore.getState();
-        if (sentInvitation) {
-          const session = await createGame(
-            selectedGame,
-            user.id,
-            selectedFriend.id
-          );
-          const gameSlug = selectedGame.replaceAll('_', '-');
-          const targetUrl = `/game/${gameSlug}/${session.id}`;
-          cancelInvite();
-          // Use small delay to let state settle before navigating
-          requestAnimationFrame(() => {
-            navigate(targetUrl);
-          });
-        }
-      }, 2000);
+      // GameInviteListener handles acceptance/decline in real-time
     } catch (err) {
       console.error('Failed to send invite:', err);
     }
