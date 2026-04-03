@@ -60,7 +60,7 @@ export default function HomePage() {
           {Object.entries(GAME_INFO).map(([type, info]) => (
             <Link
               key={type}
-              to={ROUTES.LOBBY}
+              to={`${ROUTES.LOBBY}?game=${type}`}
               className="home-game-card card card-interactive"
             >
               <span className="home-game-emoji">{info.emoji}</span>

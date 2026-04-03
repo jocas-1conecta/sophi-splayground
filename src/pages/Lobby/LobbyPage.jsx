@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { GAME_INFO, GAME_TYPES } from '../../constants/gameConfig';
 import { useAuthStore } from '../../stores/authStore';
 import { useFriendStore } from '../../stores/friendStore';
@@ -185,9 +185,13 @@ export default function LobbyPage() {
     createGame,
   } = useGameStore();
 
-  const [selectedGame, setSelectedGame] = useState(null);
+  const [searchParams] = useSearchParams();
+  const preselectedGame = searchParams.get('game');
+  const validPreselect = preselectedGame && GAME_INFO[preselectedGame] ? preselectedGame : null;
+
+  const [selectedGame, setSelectedGame] = useState(validPreselect);
   const [selectedFriend, setSelectedFriend] = useState(null);
-  const [step, setStep] = useState('game'); // 'game' | 'friend'
+  const [step, setStep] = useState(validPreselect ? 'friend' : 'game');
 
   // Load friends on mount
   useEffect(() => {
