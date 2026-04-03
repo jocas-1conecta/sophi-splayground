@@ -25,7 +25,6 @@ export const useRewardStore = create((set, get) => ({
     // Future: fetch from Supabase
     set({ isLoading: true });
     try {
-      // const { data } = await supabase.from('user_rewards').select('*').eq('user_id', userId);
       set({ unlockedRewards: [], isLoading: false });
     } catch {
       set({ isLoading: false });
