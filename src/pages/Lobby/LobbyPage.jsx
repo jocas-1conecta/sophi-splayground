@@ -65,8 +65,10 @@ function FriendPicker({ friends, onlineUsers, onSelect, selectedId }) {
   const renderFriend = (friend, isOnline) => (
     <button
       key={friend.id}
-      className={`friend-picker-item ${selectedId === friend.id ? 'selected' : ''}`}
-      onClick={() => onSelect(friend)}
+      className={`friend-picker-item ${selectedId === friend.id ? 'selected' : ''} ${!isOnline ? 'friend-picker-offline' : ''}`}
+      onClick={() => isOnline && onSelect(friend)}
+      disabled={!isOnline}
+      title={!isOnline ? 'Debe estar en línea para invitar' : ''}
     >
       <div className="avatar-wrapper">
         <div className={`avatar avatar-sm ${!isOnline ? 'avatar-muted' : ''}`}>
@@ -75,6 +77,7 @@ function FriendPicker({ friends, onlineUsers, onSelect, selectedId }) {
         <span className={`online-dot ${isOnline ? 'online' : 'offline'}`} />
       </div>
       <span className="friend-picker-name">{friend.display_name}</span>
+      {!isOnline && <span className="friend-picker-offline-tag">Offline</span>}
     </button>
   );
 
@@ -211,11 +214,15 @@ export default function LobbyPage() {
     setSelectedFriend(friend);
   };
 
+  // Clear selected friend if they go offline
+  const isFriendOnline = selectedFriend ? !!onlineUsers[selectedFriend.id] : false;
+
   const handleInvite = async () => {
     if (!selectedGame || !selectedFriend || !user) return;
+    // Block invite if friend is offline
+    if (!onlineUsers[selectedFriend.id]) return;
     try {
       await sendInvite(user.id, selectedFriend.id, selectedGame);
-      // GameInviteListener handles acceptance/decline in real-time
     } catch (err) {
       console.error('Failed to send invite:', err);
     }
@@ -279,12 +286,19 @@ export default function LobbyPage() {
           />
 
           {selectedFriend && (
-            <button
-              className="btn btn-primary btn-full btn-lg lobby-invite-btn animate-pop-in"
-              onClick={handleInvite}
-            >
-              Invitar a {selectedFriend.display_name} 💌
-            </button>
+            isFriendOnline ? (
+              <button
+                className="btn btn-primary btn-full btn-lg lobby-invite-btn animate-pop-in"
+                onClick={handleInvite}
+              >
+                Invitar a {selectedFriend.display_name} 💌
+              </button>
+            ) : (
+              <div className="lobby-offline-warning animate-fade-in">
+                <span>⚫</span>
+                <p>{selectedFriend.display_name} no está en línea</p>
+              </div>
+            )
           )}
         </div>
       )}

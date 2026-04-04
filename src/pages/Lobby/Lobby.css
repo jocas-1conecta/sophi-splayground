@@ -238,6 +238,47 @@
   color: var(--text-muted);
 }
 
+.friend-picker-offline {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.friend-picker-offline:hover {
+  transform: none;
+  border-color: var(--glass-border);
+}
+
+.friend-picker-offline-tag {
+  margin-left: auto;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--text-muted);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(235, 111, 146, 0.08);
+  border: 1px solid rgba(235, 111, 146, 0.15);
+}
+
+.lobby-offline-warning {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: rgba(235, 111, 146, 0.06);
+  border: 1px dashed rgba(235, 111, 146, 0.25);
+  border-radius: var(--radius-lg);
+  margin-top: var(--space-sm);
+}
+
+.lobby-offline-warning p {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin: 0;
+}
+
 .lobby-invite-btn {
   margin-top: var(--space-sm);
 }
